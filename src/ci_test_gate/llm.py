@@ -101,17 +101,66 @@ def _build_user_prompt(ctx: AnalysisContext) -> str:
 def _find_test_candidates(source_path: str, test_files: list[str]) -> list[str]:
     """Find test files that likely cover a source file."""
     candidates = []
-    # Extract the base name without path and extension
-    source_parts = source_path.replace("/", ".").rsplit(".", 1)[0]
-    # e.g. "api.users" from "api/users.py"
-    source_base = source_parts.split(".")[-1]  # "users"
+    
+    # Normalize path separators
+    norm_source = source_path.replace("\\", "/").strip("/")
+    source_parts = norm_source.split("/")
+    source_file = source_parts[-1]
+    
+    # Extract base name without extension
+    source_base = source_file
+    for ext in [".py", ".ts", ".js", ".go", ".rs", ".jsx", ".tsx"]:
+        if source_base.endswith(ext):
+            source_base = source_base[:-len(ext)]
+            break
+    else:
+        if "." in source_base:
+            source_base = source_base.rsplit(".", 1)[0]
+            
+    # Extract relative path slug excluding common top-level directory names
+    trimmed_parts = [p for p in source_parts[:-1] if p not in ("src", "lib", "app", "pkg")]
+    path_slug = "_".join(trimmed_parts + [source_base]) if trimmed_parts else source_base
 
     for test_path in test_files:
-        test_parts = test_path.replace("/", ".").rsplit(".", 1)[0]
-        test_base = test_parts.split(".")[-1]
-        # Heuristic: test_users covers users, users_test covers users
-        if test_base == f"test_{source_base}" or test_base == f"{source_base}_test":
+        norm_test = test_path.replace("\\", "/").strip("/")
+        test_parts = norm_test.split("/")
+        test_file = test_parts[-1]
+        
+        # Strip compound test extensions (.test.ts, .spec.js, _test.go, etc.)
+        test_stem = test_file
+        for ext in [
+            ".test.ts", ".test.js", ".test.jsx", ".test.tsx",
+            ".spec.ts", ".spec.js", ".spec.jsx", ".spec.tsx",
+            "_test.go", "_test.rs", "_test.py",
+            ".py", ".ts", ".js", ".go", ".rs", ".jsx", ".tsx"
+        ]:
+            if test_stem.endswith(ext):
+                test_stem = test_stem[:-len(ext)]
+                break
+        else:
+            if "." in test_stem:
+                test_stem = test_stem.rsplit(".", 1)[0]
+                
+        # 1. Direct match: test_<base>, <base>_test, or stem == base/slug
+        if (
+            test_stem in (source_base, path_slug)
+            or test_stem in (f"test_{source_base}", f"{source_base}_test", f"test_{path_slug}", f"{path_slug}_test")
+            or test_stem.startswith(f"test_{path_slug}")
+            or test_stem.endswith(f"{path_slug}_test")
+            or test_stem.endswith(f"_{source_base}_test")
+            or (test_stem == source_base and any(s in norm_test for s in ("test", "spec")))
+        ):
             candidates.append(test_path)
+            continue
+
+        # 2. Subdirectory match: tests/unit/test_users.py or tests/integration/users_test.py
+        if (
+            f"test_{source_base}" in test_stem
+            or f"{source_base}_test" in test_stem
+            or test_stem == source_base
+        ):
+            candidates.append(test_path)
+            continue
 
     return candidates[:5]
 

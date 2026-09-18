@@ -147,6 +147,35 @@ class TestFindTestCandidates:
         candidates = _find_test_candidates("src/test.py", test_files)
         assert len(candidates) <= 5
 
+    def test_nested_directory_matching(self):
+        test_files = [
+            "tests/unit/test_users.py",
+            "tests/integration/test_orders.py",
+            "test/functional/users_test.py",
+        ]
+        candidates = _find_test_candidates("src/api/users.py", test_files)
+        assert "tests/unit/test_users.py" in candidates
+        assert "test/functional/users_test.py" in candidates
+        assert "tests/integration/test_orders.py" not in candidates
+
+    def test_prefix_path_matching(self):
+        test_files = [
+            "tests/test_api_users.py",
+            "tests/api_users_test.py",
+            "tests/test_unrelated.py",
+        ]
+        candidates = _find_test_candidates("src/api/users.py", test_files)
+        assert "tests/test_api_users.py" in candidates
+        assert "tests/api_users_test.py" in candidates
+        assert "tests/test_unrelated.py" not in candidates
+
+    def test_multi_language_suffixes(self):
+        candidates_ts = _find_test_candidates("src/auth.ts", ["tests/auth.test.ts", "tests/other.test.ts"])
+        assert "tests/auth.test.ts" in candidates_ts
+
+        candidates_go = _find_test_candidates("pkg/server/server.go", ["pkg/server/server_test.go", "pkg/db/db_test.go"])
+        assert "pkg/server/server_test.go" in candidates_go
+
 
 class TestFallbackClassify:
     """Tests for _fallback_classify."""
