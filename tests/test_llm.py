@@ -133,6 +133,28 @@ class TestFindTestCandidates:
         candidates = _find_test_candidates("src/users.py", ["users_test.py", "orders_test.py"])
         assert "users_test.py" in candidates
 
+    def test_nested_and_prefixed_match(self):
+        candidates = _find_test_candidates(
+            "src/api/users.py",
+            [
+                "tests/unit/test_users.py",
+                "tests/integration/test_api_users.py",
+                "tests/api/users_test.py",
+                "tests/unit/orders_test.py",
+            ],
+        )
+        assert "tests/unit/test_users.py" in candidates
+        assert "tests/integration/test_api_users.py" in candidates
+        assert "tests/api/users_test.py" in candidates
+
+    def test_dotted_test_suffix_match(self):
+        candidates = _find_test_candidates(
+            "src/api/users.py",
+            ["tests/unit/users.test.ts", "tests/unit/users.spec.ts", "tests/unit/orders.test.ts"],
+        )
+        assert "tests/unit/users.test.ts" in candidates
+        assert "tests/unit/users.spec.ts" in candidates
+
     def test_no_match(self):
         candidates = _find_test_candidates("src/foo.py", ["test_bar.py", "test_baz.py"])
         assert candidates == []

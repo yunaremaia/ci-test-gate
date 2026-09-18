@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 from .context import AnalysisContext
 from .models import (
@@ -98,20 +99,64 @@ def _build_user_prompt(ctx: AnalysisContext) -> str:
     return "\n".join(parts)
 
 
+def _normalize_name(value: str) -> str:
+    """Normalize a filename or module name so naming conventions align."""
+    return re.sub(r"[^a-zA-Z0-9]+", "_", value).strip("_").lower()
+
+
+def _source_variants(source_path: str) -> set[str]:
+    """Return likely names for a source file, including nested module names."""
+    normalized = source_path.replace("\\", "/").strip("/")
+    name_no_ext = normalized.rsplit(".", 1)[0] if "." in os.path.basename(normalized) else normalized
+    segments = [seg for seg in name_no_ext.split("/") if seg]
+    variants: set[str] = set()
+
+    if not segments:
+        return variants
+
+    variants.add(_normalize_name(os.path.basename(name_no_ext)))
+    if len(segments) > 1:
+        variants.add(_normalize_name("_".join(segments[-2:])))
+    if len(segments) > 2:
+        variants.add(_normalize_name("_".join(segments[-3:])))
+
+    return {variant for variant in variants if variant}
+
+
+def _test_variants(test_path: str) -> set[str]:
+    """Return likely underlying names for a test file, removing known prefixes/suffixes."""
+    base = os.path.basename(test_path)
+    stem = os.path.splitext(base)[0]
+    value = _normalize_name(stem)
+    variants = {value}
+
+    for prefix in ("test_", "spec_", "it_"):
+        if value.startswith(prefix):
+            variants.add(value[len(prefix):])
+
+    for suffix in ("_test", "_spec"):
+        if value.endswith(suffix):
+            variants.add(value[: -len(suffix)])
+
+    return {variant for variant in variants if variant}
+
+
 def _find_test_candidates(source_path: str, test_files: list[str]) -> list[str]:
     """Find test files that likely cover a source file."""
+    source_variants = _source_variants(source_path)
+    if not source_variants:
+        return []
+
     candidates = []
-    # Extract the base name without path and extension
-    source_parts = source_path.replace("/", ".").rsplit(".", 1)[0]
-    # e.g. "api.users" from "api/users.py"
-    source_base = source_parts.split(".")[-1]  # "users"
+    seen: set[str] = set()
 
     for test_path in test_files:
-        test_parts = test_path.replace("/", ".").rsplit(".", 1)[0]
-        test_base = test_parts.split(".")[-1]
-        # Heuristic: test_users covers users, users_test covers users
-        if test_base == f"test_{source_base}" or test_base == f"{source_base}_test":
-            candidates.append(test_path)
+        for variant in _test_variants(test_path):
+            if variant in source_variants:
+                if test_path not in seen:
+                    candidates.append(test_path)
+                    seen.add(test_path)
+                break
 
     return candidates[:5]
 
