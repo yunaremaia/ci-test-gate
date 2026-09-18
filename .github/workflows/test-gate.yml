@@ -20,7 +20,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install ci-test-gate
-        run: pip install ci-test-gate
+        run: pip install -e '.[dev]'
 
       - name: Analyze PR
         id: analyze
