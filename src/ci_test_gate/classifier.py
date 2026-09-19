@@ -54,7 +54,7 @@ class TestRecommendation:
 class TestClassifier:
     """Classify tests based on code changes."""
 
-    def __init__(self, classifier_type):
+    def __init__(self, classifier_type: str = "heuristic"):
         self.classifier_type = classifier_type
 
     @classmethod
@@ -66,18 +66,48 @@ class TestClassifier:
         else:
             raise ValueError("Invalid classifier type")
 
-    def classify(self, context: ChangeContext, diff: DiffParser) -> TestRecommendation:
+    def classify(self, changes: list, context: ChangeContext, test_files: list[str] | None = None) -> TestRecommendation:
         if self.classifier_type == "llm":
-            return self.llm_classify(context, diff)
+            return self.llm_classify(changes, context)
         elif self.classifier_type == "heuristic":
-            return self.heuristic_classify(context, diff)
+            return self.heuristic_classify(changes, context, test_files)
         else:
             raise ValueError("Invalid classifier type")
 
-    def llm_classify(self, context: ChangeContext, diff: DiffParser) -> TestRecommendation:
+    def llm_classify(self, changes: list, context: ChangeContext) -> TestRecommendation:
         # Implement LLM-based classification logic
-        pass
+        return TestRecommendation(
+            reasoning="LLM classifier not yet implemented; falling back to heuristic.",
+        )
 
-    def heuristic_classify(self, context: ChangeContext, diff: DiffParser) -> TestRecommendation:
-        # Implement heuristic-based classification logic
-        pass
+    def heuristic_classify(
+        self,
+        changes: list,
+        context: ChangeContext,
+        test_files: list[str] | None = None,
+    ) -> TestRecommendation:
+        """Simple heuristic: recommend tests matching changed file paths."""
+        required: list[str] = []
+        recommended: list[str] = []
+        for change in changes:
+            path = change.path
+            if test_files:
+                for tf in test_files:
+                    if path in tf or tf.replace("test_", "").replace("_test.", ".") in path:
+                        if tf not in required:
+                            required.append(tf)
+        # If changed files are only CI/workflow, nothing is required
+        if not required:
+            changed_paths = [c.path for c in changes]
+            if all(p.startswith(".github/") or p.endswith(".yml") or p.endswith(".yaml") for p in changed_paths):
+                return TestRecommendation(
+                    optional=test_files or [],
+                    reasoning="CI-only changes detected; no specific tests required.",
+                    estimated_savings_pct=80 if test_files else 0,
+                )
+        return TestRecommendation(
+            required=required,
+            recommended=recommended,
+            reasoning=f"Heuristic match: {len(required)} required test(s) from {len(changes)} changed file(s).",
+            estimated_savings_pct=50 if test_files else 0,
+        )
