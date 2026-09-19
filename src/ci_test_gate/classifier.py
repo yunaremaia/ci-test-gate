@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from .context_builder import ChangeContext
 from .diff_parser import DiffParser, FileChange
+from .llm import LLMConfig
 
 @dataclass
 class TestRecommendation:
@@ -54,8 +55,9 @@ class TestRecommendation:
 class TestClassifier:
     """Classify tests based on code changes."""
 
-    def __init__(self, classifier_type: str = "heuristic"):
+    def __init__(self, classifier_type: str = "heuristic", config: dict | None = None):
         self.classifier_type = classifier_type
+        self.config = config or {}
 
     @classmethod
     def from_config(cls, config):
@@ -75,10 +77,8 @@ class TestClassifier:
             raise ValueError("Invalid classifier type")
 
     def llm_classify(self, changes: list, context: ChangeContext, test_files: list[str] | None = None) -> TestRecommendation:
-        # Implement LLM-based classification logic
-        return TestRecommendation(
-            reasoning="LLM classifier not yet implemented; falling back to heuristic.",
-        )
+        """Base implementation: delegates to heuristic. Override in LLMTestClassifier."""
+        return self.heuristic_classify(changes, context, test_files)
 
     def _estimate_savings(self, required: list[str], all_tests: list[str]) -> int:
         """Estimate CI time savings percentage."""
@@ -120,3 +120,110 @@ class TestClassifier:
             reasoning=f"Heuristic match: {len(required)} required test(s) from {len(changes)} changed file(s).",
             estimated_savings_pct=50 if test_files else 0,
         )
+
+class HeuristicTestClassifier(TestClassifier):
+    """Heuristic-based test classifier."""
+
+    def __init__(self, config: dict | None = None):
+        super().__init__(classifier_type="heuristic", config=config)
+
+class LLMTestClassifier(TestClassifier):
+    """LLM-powered test classifier.
+
+    Configuration is read from ``config`` dict or environment variables:
+
+    * ``api_key`` / ``OPENAI_API_KEY``    — OpenAI-compatible API key (required).
+    * ``model`` / ``CI_TEST_GATE_MODEL``  — Model name (default: ``gpt-4o-mini``).
+    * ``base_url`` / ``OPENAI_BASE_URL``  — Base URL (default: OpenAI production).
+    """
+
+    def __init__(self, config: dict | None = None):
+        super().__init__(classifier_type="llm", config=config)
+        cfg = self.config
+        self.api_key: str = cfg.get("api_key") or os.environ.get("OPENAI_API_KEY", "")
+        self.model: str = cfg.get("model") or os.environ.get("CI_TEST_GATE_MODEL", "gpt-4o-mini")
+        self.base_url: str = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+    def llm_classify(
+        self,
+        changes: list,
+        context: ChangeContext,
+        test_files: list[str] | None = None,
+    ) -> TestRecommendation:
+        """Classify tests using LLM semantic analysis.
+
+        Falls back to the heuristic classifier when no API key is configured
+        or when the LLM call fails for any reason.
+        """
+        if not self.api_key:
+            # No API key configured — degrade gracefully.
+            return self.heuristic_classify(changes, context, test_files)
+
+        llm_cfg = LLMConfig(
+            api_key=self.api_key,
+            model=self.model,
+            base_url=self.base_url,
+        )
+
+        system_prompt = (
+            "You are an expert CI test classifier. Given a list of changed source files "
+            "and available test files, classify each test as 'required', 'recommended', "
+            "or 'optional' based on how likely the changes are to cause regressions. "
+            "Be conservative — when in doubt mark as 'recommended'.\n\n"
+            "Return ONLY a JSON object (no markdown fences) with this exact schema:\n"
+            '{"required": [...], "recommended": [...], "optional": [...], '
+            '"reasoning": "<one-line summary>", "estimated_savings_pct": <0-95>}'
+        )
+
+        changed_paths = [c.path for c in changes]
+        user_prompt_parts = [
+            "## Changed source files",
+            *[f"- {p}" for p in changed_paths],
+            "",
+        ]
+        if test_files:
+            user_prompt_parts += [
+                f"## Available test files ({len(test_files)})",
+                *[f"- {t}" for t in test_files[:200]],
+                "",
+            ]
+        user_prompt = "\n".join(user_prompt_parts)
+
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=llm_cfg.api_key, base_url=llm_cfg.base_url)
+            response = client.chat.completions.create(
+                model=llm_cfg.model,
+                temperature=llm_cfg.temperature,
+                max_tokens=llm_cfg.max_tokens,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            raw = (response.choices[0].message.content or "").strip()
+
+            # Strip optional markdown fences some models emit.
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1]
+            if raw.endswith("```"):
+                raw = raw.rsplit("```", 1)[0]
+            raw = raw.strip()
+
+            data = json.loads(raw)
+            return TestRecommendation(
+                required=data.get("required", []),
+                recommended=data.get("recommended", []),
+                optional=data.get("optional", []),
+                reasoning=data.get("reasoning", ""),
+                estimated_savings_pct=int(data.get("estimated_savings_pct", 0)),
+            )
+        except Exception as exc:
+            # Any failure (network, parse, etc.) → heuristic fallback.
+            fallback = self.heuristic_classify(changes, context, test_files)
+            fallback.reasoning = (
+                f"LLM call failed ({type(exc).__name__}: {exc}); "
+                f"heuristic fallback: {fallback.reasoning}"
+            )
+            return fallback

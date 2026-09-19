@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from ci_test_gate import __version__
-from ci_test_gate.classifier import TestClassifier
+from ci_test_gate.classifier import LLMTestClassifier, TestClassifier
 from ci_test_gate.context_builder import ContextBuilder
 from ci_test_gate.diff_parser import DiffParser
 
@@ -48,6 +48,22 @@ def main(argv: list[str] | None = None) -> int:
         default="markdown",
         help="Output format",
     )
+    suggest_parser.add_argument(
+        "--llm",
+        action="store_true",
+        default=False,
+        help="Use LLM semantic classification instead of heuristics",
+    )
+    suggest_parser.add_argument(
+        "--llm-api-key",
+        default=None,
+        help="OpenAI-compatible API key (overrides OPENAI_API_KEY env var)",
+    )
+    suggest_parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="LLM model name to use (default: gpt-4o-mini)",
+    )
 
     # `local` command (pre-push validation)
     local_parser = subparsers.add_parser("local", help="Local pre-push validation (auto-discovers diff)")
@@ -67,6 +83,22 @@ def main(argv: list[str] | None = None) -> int:
         choices=["json", "markdown", "sarif"],
         default="markdown",
         help="Output format",
+    )
+    local_parser.add_argument(
+        "--llm",
+        action="store_true",
+        default=False,
+        help="Use LLM semantic classification instead of heuristics",
+    )
+    local_parser.add_argument(
+        "--llm-api-key",
+        default=None,
+        help="OpenAI-compatible API key (overrides OPENAI_API_KEY env var)",
+    )
+    local_parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="LLM model name to use (default: gpt-4o-mini)",
     )
 
     args = parser.parse_args(argv)
@@ -133,7 +165,15 @@ def _handle_local(args) -> int:
     context = builder.build(changes)
 
     # Classify
-    classifier = TestClassifier()
+    if getattr(args, "llm", False):
+        llm_config = {
+            "classifier_type": "llm",
+            "api_key": getattr(args, "llm_api_key", None),
+            "model": getattr(args, "llm_model", None),
+        }
+        classifier: TestClassifier = LLMTestClassifier(llm_config)
+    else:
+        classifier = TestClassifier()
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output
@@ -182,7 +222,15 @@ def _handle_suggest(args) -> int:
         test_files = [line.strip() for line in args.test_files.read_text().splitlines() if line.strip()]
 
     # Classify
-    classifier = TestClassifier()
+    if getattr(args, "llm", False):
+        llm_config = {
+            "classifier_type": "llm",
+            "api_key": getattr(args, "llm_api_key", None),
+            "model": getattr(args, "llm_model", None),
+        }
+        classifier: TestClassifier = LLMTestClassifier(llm_config)
+    else:
+        classifier = TestClassifier()
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output

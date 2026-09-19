@@ -48,9 +48,53 @@ See [docs/LANGUAGES.md](docs/LANGUAGES.md) for language-specific test pattern do
 - `gate` — Block merge if required tests didn't run
 - `local` — Run before push to catch issues early
 
+---
+
+## LLM Classification
+
+`ci-test-gate` supports LLM-powered semantic classification in addition to the built-in heuristic engine.
+When enabled, it sends the diff context to an OpenAI-compatible API and lets the model reason about which tests are most likely affected.
+
+### Enabling LLM mode
+
+Pass `--llm` to the `suggest` or `local` command:
+
+```bash
+ci-test-gate suggest --diff pr.diff --test-files tests.txt --llm
+```
+
+### Configuration
+
+| CLI flag | Environment variable | Default | Description |
+|---|---|---|---|
+| `--llm` | — | off | Enable LLM classification |
+| `--llm-api-key` | `OPENAI_API_KEY` | — | API key for the OpenAI-compatible endpoint |
+| `--llm-model` | `CI_TEST_GATE_MODEL` | `gpt-4o-mini` | Model to use |
+| — | `OPENAI_BASE_URL` | OpenAI production | Base URL (for local/alternative endpoints) |
+
+CLI flags take precedence over environment variables.
+
+### Example — using a custom model
+
+```bash
+export OPENAI_API_KEY="sk-..."
+ci-test-gate suggest \
+  --diff pr.diff \
+  --test-files tests.txt \
+  --llm \
+  --llm-model gpt-4o \
+  --output json
+```
+
+### Fallback behaviour
+
+If no API key is configured, or if the LLM call fails for any reason (network error, rate limit, malformed response), `ci-test-gate` automatically falls back to the heuristic classifier so your CI pipeline is never blocked.
+
+---
+
 ### Roadmap
 
-- [ ] LLM semantic classification (v0.2.0)
+- [x] LLM semantic classification (v0.2.0)
 - [ ] Gate mode enforcement (v0.2.0)
 - [ ] Dashboard with savings metrics (v0.4.0)
 
