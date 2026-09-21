@@ -155,14 +155,14 @@ class ContextBuilder:
         for line in change.added_lines:
             match = self.FUNCTION_PATTERNS[ext].match(line.strip())
             if match:
-                func_name = match.group(2) if ext in (".ts", ".js") else match.group(1)
+                func_name = match.group(3) if ext in (".ts", ".js") else match.group(1)
                 if not func_name:
                     func_name = match.group(0)
                 context.functions_changed.setdefault(change.path, []).append(f"+{func_name}")
         for line in change.removed_lines:
             match = self.FUNCTION_PATTERNS[ext].match(line.strip())
             if match:
-                func_name = match.group(2) if ext in (".ts", ".js") else match.group(1)
+                func_name = match.group(3) if ext in (".ts", ".js") else match.group(1)
                 if not func_name:
                     func_name = match.group(0)
                 context.functions_changed.setdefault(change.path, []).append(f"-{func_name}")

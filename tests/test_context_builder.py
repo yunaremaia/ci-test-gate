@@ -70,3 +70,16 @@ class TestChangeContext:
         ctx = ChangeContext(changed_files=[])
         output = ctx.to_prompt_context()
         assert "Scope: small" in output
+
+@pytest.mark.parametrize("extension", ["ts", "js"])
+@pytest.mark.parametrize("prefix", ["", "export ", "async ", "export async "])
+def test_javascript_function_names(extension, prefix):
+    path = f"src/client.{extension}"
+    change = FileChange(
+        path=path,
+        added_lines=[f"  {prefix}function fetchData() {{"],
+        removed_lines=[f"  {prefix}function oldFetch() {{"],
+    )
+    context = ContextBuilder().build([change])
+    assert context.functions_changed == {path: ["+fetchData", "-oldFetch"]}
+    assert f"{path}: +fetchData, -oldFetch" in context.to_prompt_context()
