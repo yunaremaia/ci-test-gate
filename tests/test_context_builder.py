@@ -54,6 +54,38 @@ class TestContextBuilder:
         assert "src/main.py" in context.imports_added
         assert "os" in context.imports_added["src/main.py"]
 
+    @pytest.mark.parametrize(
+        ("declaration", "function_name"),
+        [
+            ("function fetchData() {", "fetchData"),
+            ("async function loadUsers() {", "loadUsers"),
+            ("export function saveData() {", "saveData"),
+            ("export async function syncData() {", "syncData"),
+        ],
+    )
+    def test_issue_81_extracts_javascript_function_name(self, declaration, function_name):
+        change = FileChange(path="src/api.js", added_lines=[declaration])
+
+        context = ContextBuilder().build([change])
+
+        assert context.functions_changed["src/api.js"] == [f"+{function_name}"]
+
+    @pytest.mark.parametrize(
+        ("declaration", "function_name"),
+        [
+            ("function fetchData() {", "fetchData"),
+            ("async function loadUsers() {", "loadUsers"),
+            ("export function saveData() {", "saveData"),
+            ("export async function syncData() {", "syncData"),
+        ],
+    )
+    def test_issue_81_extracts_typescript_function_name(self, declaration, function_name):
+        change = FileChange(path="src/api.ts", added_lines=[declaration])
+
+        context = ContextBuilder().build([change])
+
+        assert context.functions_changed["src/api.ts"] == [f"+{function_name}"]
+
     def test_prompt_context_output(self):
         changes = [
             FileChange(path="src/main.py"),
