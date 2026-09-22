@@ -15,6 +15,7 @@ class FileChange:
     hunks: list[str] = field(default_factory=list)
     is_new: bool = False
     is_deleted: bool = False
+    is_binary: bool = False
 
     @property
     def extension(self) -> str:
@@ -65,6 +66,18 @@ class DiffParser:
             if current_change is None:
                 continue
 
+            if line == "\\ No newline at end of file":
+                continue
+
+            if (line.startswith("Binary files ") and line.endswith(" differ")) or (
+                line == "GIT binary patch"
+            ):
+                current_change.is_binary = True
+                continue
+
+            if current_change.is_binary:
+                continue
+
             if self.NEW_FILE_RE.match(line):
                 current_change.is_new = True
                 continue
@@ -109,9 +122,9 @@ class DiffParser:
         return [c for c in changes if c.extension == ext]
 
     def get_non_test_changes(self, changes: list[FileChange]) -> list[FileChange]:
-        """Get changes that are not test files."""
-        return [c for c in changes if not c.is_test_file]
+        """Get non-binary changes that are not test files."""
+        return [c for c in changes if not c.is_test_file and not c.is_binary]
 
     def get_test_changes(self, changes: list[FileChange]) -> list[FileChange]:
-        """Get changes that are test files."""
-        return [c for c in changes if c.is_test_file]
+        """Get non-binary changes that are test files."""
+        return [c for c in changes if c.is_test_file and not c.is_binary]

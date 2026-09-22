@@ -87,6 +87,7 @@ class ContextBuilder:
 
     def build(self, changes: list[FileChange]) -> ChangeContext:
         """Build context from a list of file changes."""
+        changes = [c for c in changes if not c.is_binary]
         context = ChangeContext(changed_files=changes)
         context.test_files_present = [c.path for c in changes if c.is_test_file]
         context.test_runners_detected = self._detect_test_runners(changes)

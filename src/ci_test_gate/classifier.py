@@ -69,6 +69,13 @@ class TestClassifier:
             raise ValueError("Invalid classifier type")
 
     def classify(self, changes: list, context: ChangeContext, test_files: list[str] | None = None) -> TestRecommendation:
+        text_changes = [c for c in changes if not getattr(c, "is_binary", False)]
+        if changes and not text_changes:
+            return TestRecommendation(
+                optional=test_files or [],
+                reasoning="Binary-only changes; no source files to classify.",
+            )
+        changes = text_changes
         if self.classifier_type == "llm":
             return self.llm_classify(changes, context, test_files)
         elif self.classifier_type == "heuristic":
