@@ -161,9 +161,22 @@ def _find_test_candidates(source_path: str, test_files: list[str]) -> list[str]:
     return candidates[:5]
 
 
+_PROJECT_CONFIG_FILES = frozenset({
+    "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+    "pyproject.toml", "requirements.txt", "poetry.lock", "uv.lock",
+    "Cargo.toml", "Cargo.lock", "go.mod", "go.sum",
+})
+
+
+def _is_project_config_path(path: str) -> bool:
+    """Match a project-wide configuration file, including in a subproject."""
+    return path.replace("\\", "/").rsplit("/", 1)[-1] in _PROJECT_CONFIG_FILES
+
+
 def _fallback_classify(ctx: AnalysisContext) -> AnalysisResult:
     """Fallback rule-based classification when LLM is unavailable."""
     recommendations: list[TestRecommendation] = []
+    config_changed = any(_is_project_config_path(f.path) for f in ctx.diff.files)
 
     for f in ctx.diff.files:
         path = f.path
@@ -187,7 +200,21 @@ def _fallback_classify(ctx: AnalysisContext) -> AnalysisResult:
                     confidence=0.9,
                 ))
 
-    # If no specific tests found, recommend running all
+    # Project configuration can affect every test, even if a direct source
+    # match was found. Preserve directly modified tests as REQUIRED.
+    if config_changed:
+        covered = {rec.suite.path for rec in recommendations}
+        for test_path in ctx.test_files_in_repo:
+            if test_path not in covered:
+                recommendations.append(TestRecommendation(
+                    suite=TestSuite(path=test_path, framework=ctx.test_framework),
+                    risk=TestRisk.RECOMMENDED,
+                    reason="Project configuration changed",
+                    confidence=0.8,
+                ))
+                covered.add(test_path)
+
+    # If no specific tests found, recommend a broad sample.
     if not recommendations and ctx.test_files_in_repo:
         for t in ctx.test_files_in_repo[:10]:
             recommendations.append(TestRecommendation(

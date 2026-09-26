@@ -14,6 +14,28 @@ from ci_test_gate.diff_parser import FileChange
 class TestHandleSuggest:
     """Tests for _handle_suggest function."""
 
+    def test_config_changes_flag_controls_broad_selection(self, tmp_path, capsys):
+        import json
+
+        diff = tmp_path / "change.diff"
+        diff.write_text(
+            "diff --git a/pyproject.toml b/pyproject.toml\n"
+            "--- a/pyproject.toml\n+++ b/pyproject.toml\n"
+            "@@ -1 +1 @@\n-old\n+new\n"
+        )
+        tests = tmp_path / "tests.txt"
+        paths = [f"tests/test_module_{i}.py" for i in range(12)]
+        tests.write_text("\n".join(paths) + "\n")
+
+        args = ["suggest", "--diff", str(diff), "--test-files", str(tests), "--output", "json"]
+        assert main(args) == 0
+        broad = json.loads(capsys.readouterr().out)
+        assert broad["recommended"] == paths
+
+        assert main(args + ["--config-changes", "normal"]) == 0
+        normal = json.loads(capsys.readouterr().out)
+        assert normal["recommended"] == []
+
     def _make_args(self, diff_text, test_files_text=None, output="markdown", mode="suggest"):
         """Helper to create args namespace."""
         args = type("Args", (), {})()

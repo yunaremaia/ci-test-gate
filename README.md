@@ -48,6 +48,16 @@ See [docs/LANGUAGES.md](docs/LANGUAGES.md) for language-specific test pattern do
 - `gate` — Block merge if required tests didn't run
 - `local` — Run before push to catch issues early
 
+### Project configuration changes
+
+Changes to common dependency and build files (such as `pyproject.toml`,
+`package.json`, `Cargo.toml`, and `go.mod`, including files in subprojects)
+recommend every listed test. Directly modified tests remain required. This
+conservative default applies to `suggest` and `local`, including `--llm` mode.
+Use `--config-changes normal` to use the ordinary path-matching behavior
+instead. Supply the complete test-file list with `--test-files` in `suggest`
+mode; recommendations can include only tests the tool knows about.
+
 ---
 
 ## LLM Classification

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from .context_builder import ChangeContext
 from .diff_parser import DiffParser, FileChange
-from .llm import LLMConfig
+from .llm import LLMConfig, _is_project_config_path
 
 # Module-level placeholder so tests can patch OpenAI without triggering a
 # hard import at import time (the openai package is optional at runtime).
@@ -83,6 +83,10 @@ class TestClassifier:
                 reasoning="Binary-only changes; no source files to classify.",
             )
         changes = text_changes
+        if self.config.get("config_changes", "broad") == "broad" and any(
+            _is_project_config_path(change.path) for change in changes
+        ):
+            return self.heuristic_classify(changes, context, test_files)
         if self.classifier_type == "llm":
             return self.llm_classify(changes, context, test_files)
         elif self.classifier_type == "heuristic":
@@ -103,6 +107,24 @@ class TestClassifier:
 
     def heuristic_classify(self, changes: list, context: ChangeContext, test_files: list[str] | None = None) -> TestRecommendation:
         """Simple heuristic: recommend tests matching changed file paths."""
+        if self.config.get("config_changes", "broad") == "broad" and any(
+            _is_project_config_path(change.path) for change in changes
+        ):
+            all_tests = list(dict.fromkeys(test_files or []))
+            non_config_changes = [
+                change for change in changes if not _is_project_config_path(change.path)
+            ]
+            direct_matches = self.heuristic_classify(
+                non_config_changes, context, all_tests
+            ).required
+            required = set(direct_matches) | (
+                {change.path for change in changes} & set(all_tests)
+            )
+            return TestRecommendation(
+                required=[test for test in all_tests if test in required],
+                recommended=[test for test in all_tests if test not in required],
+                reasoning="Project configuration changed; recommend every available test.",
+            )
         required: list[str] = []
         optional: list[str] = []
         for change in changes:

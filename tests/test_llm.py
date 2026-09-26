@@ -223,6 +223,37 @@ class TestFallbackClassify:
         # Should recommend broad set when no match found
         assert len(result.recommended) >= 1 or len(result.required) >= 1
 
+    @pytest.mark.parametrize("config_path", ["pyproject.toml", "package.json", "Cargo.toml", "go.mod", "services/api/package.json"])
+    def test_config_change_recommends_every_test(self, config_path):
+        tests = [f"tests/test_module_{i}.py" for i in range(12)]
+        ctx = AnalysisContext(
+            diff=Diff(files=[DiffFile(path=config_path)]),
+            language=Language.PYTHON,
+            file_contexts=[],
+            test_files_in_repo=tests,
+            test_framework="pytest",
+        )
+
+        result = _fallback_classify(ctx)
+
+        assert [rec.suite.path for rec in result.recommended] == tests
+        assert not result.required
+
+    def test_config_change_preserves_direct_required_test(self):
+        tests = ["tests/test_foo.py", "tests/test_bar.py"]
+        ctx = AnalysisContext(
+            diff=Diff(files=[DiffFile(path="pyproject.toml"), DiffFile(path="tests/test_foo.py")]),
+            language=Language.PYTHON,
+            file_contexts=[],
+            test_files_in_repo=tests,
+            test_framework="pytest",
+        )
+
+        result = _fallback_classify(ctx)
+
+        assert [rec.suite.path for rec in result.required] == ["tests/test_foo.py"]
+        assert [rec.suite.path for rec in result.recommended] == ["tests/test_bar.py"]
+
 
 class TestClassifyWithLLM:
     """Tests for classify_with_llm."""

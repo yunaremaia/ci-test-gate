@@ -64,6 +64,10 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="LLM model name to use (default: gpt-4o-mini)",
     )
+    suggest_parser.add_argument(
+        "--config-changes", choices=["broad", "normal"], default="broad",
+        help="For project configuration changes, recommend all tests (broad) or use normal matching",
+    )
 
     # `local` command (pre-push validation)
     local_parser = subparsers.add_parser("local", help="Local pre-push validation (auto-discovers diff)")
@@ -99,6 +103,10 @@ def main(argv: list[str] | None = None) -> int:
         "--llm-model",
         default=None,
         help="LLM model name to use (default: gpt-4o-mini)",
+    )
+    local_parser.add_argument(
+        "--config-changes", choices=["broad", "normal"], default="broad",
+        help="For project configuration changes, recommend all tests (broad) or use normal matching",
     )
 
     args = parser.parse_args(argv)
@@ -170,10 +178,11 @@ def _handle_local(args) -> int:
             "classifier_type": "llm",
             "api_key": getattr(args, "llm_api_key", None),
             "model": getattr(args, "llm_model", None),
+            "config_changes": getattr(args, "config_changes", "broad"),
         }
         classifier: TestClassifier = LLMTestClassifier(llm_config)
     else:
-        classifier = TestClassifier()
+        classifier = TestClassifier(config={"config_changes": getattr(args, "config_changes", "broad")})
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output
@@ -227,10 +236,11 @@ def _handle_suggest(args) -> int:
             "classifier_type": "llm",
             "api_key": getattr(args, "llm_api_key", None),
             "model": getattr(args, "llm_model", None),
+            "config_changes": getattr(args, "config_changes", "broad"),
         }
         classifier: TestClassifier = LLMTestClassifier(llm_config)
     else:
-        classifier = TestClassifier()
+        classifier = TestClassifier(config={"config_changes": getattr(args, "config_changes", "broad")})
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output
