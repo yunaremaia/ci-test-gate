@@ -26,7 +26,8 @@ jobs:
       - name: Analyze PR
         id: analyze
         run: |
-          git diff ${{ github.event.pull_request.base.ref }}...HEAD | ci-test-gate suggest --diff - --output markdown > /tmp/gate_output.md
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          git diff FETCH_HEAD...HEAD | ci-test-gate suggest --diff - --output markdown > /tmp/gate_output.md
           echo "comment<<EOF" >> $GITHUB_OUTPUT
           cat /tmp/gate_output.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
