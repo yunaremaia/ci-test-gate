@@ -12,11 +12,19 @@ requires-python = ">=3.10"
 authors = [
     { name = "Yunare Maia", email = "yunare@gmail.com" },
 ]
+keywords = ["ci", "testing", "test-selection", "llm", "github-actions"]
 classifiers = [
-    "Development Status :: 4 - Alpha",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
 ]
 dependencies = ["pyyaml>=6.0", "httpx>=0.27", "pydantic>=2.0"]
 
@@ -28,6 +36,9 @@ ci-test-gate = "ci_test_gate.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/yunaremaia/ci-test-gate"
+Repository = "https://github.com/yunaremaia/ci-test-gate"
+Issues = "https://github.com/yunaremaia/ci-test-gate/issues"
+Changelog = "https://github.com/yunaremaia/ci-test-gate/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

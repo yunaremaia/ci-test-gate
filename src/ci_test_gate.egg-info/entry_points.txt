@@ -1,2 +1,0 @@
-[console_scripts]
-ci-test-gate = ci_test_gate.cli:main
