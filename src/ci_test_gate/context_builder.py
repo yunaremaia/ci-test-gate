@@ -9,6 +9,34 @@ from pathlib import Path
 from .diff_parser import FileChange
 
 
+# Project/dependency configuration files. A change to any of these can break
+# tests across the whole repository, so classification widens rather than
+# guessing from file names. Matched by basename — see ``is_config_file``.
+PROJECT_CONFIG_FILES = frozenset({
+    # Python
+    "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt",
+    "tox.ini", "pytest.ini", "pipfile", "poetry.lock", "pdm.lock",
+    # JavaScript / TypeScript
+    "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+    "tsconfig.json", "composer.json", "composer.lock",
+    # Go / Rust / other ecosystems
+    "go.mod", "go.sum", "cargo.toml", "cargo.lock",
+    "gemfile", "gemfile.lock", "pom.xml", "build.gradle",
+})
+
+
+def is_config_file(path: str) -> bool:
+    """True if the path is a project/dependency configuration file.
+
+    Matched on basename so configuration in subprojects and monorepos is
+    covered too (``services/api/package.json``, ``subproject/pyproject.toml``).
+    """
+    normalized = path.replace("\\", "/").strip("/")
+    if not normalized:
+        return False
+    return normalized.rsplit("/", 1)[-1].lower() in PROJECT_CONFIG_FILES
+
+
 @dataclass
 class ChangeContext:
     """Structured context about a code change."""

@@ -7,6 +7,7 @@ import os
 import re
 
 from .context import AnalysisContext
+from .context_builder import is_config_file
 from .models import (
     AnalysisResult,
     TestRecommendation,
@@ -161,9 +162,22 @@ def _find_test_candidates(source_path: str, test_files: list[str]) -> list[str]:
     return candidates[:5]
 
 
-def _fallback_classify(ctx: AnalysisContext) -> AnalysisResult:
-    """Fallback rule-based classification when LLM is unavailable."""
+def _fallback_classify(
+    ctx: AnalysisContext,
+    config_changes: str = "broad",
+) -> AnalysisResult:
+    """Fallback rule-based classification when LLM is unavailable.
+
+    ``config_changes="broad"`` (the default) treats a change to a project or
+    dependency configuration file as affecting every test: each test is
+    recommended, while directly changed and source-matched tests stay
+    ``REQUIRED``. ``config_changes="normal"`` restores the previous behaviour
+    of recommending a bounded broad set when nothing matched directly.
+    """
     recommendations: list[TestRecommendation] = []
+    config_changed = config_changes == "broad" and any(
+        is_config_file(f.path) for f in ctx.diff.files
+    )
 
     for f in ctx.diff.files:
         path = f.path
@@ -186,6 +200,31 @@ def _fallback_classify(ctx: AnalysisContext) -> AnalysisResult:
                     reason=f"Direct test for modified source {path}",
                     confidence=0.9,
                 ))
+
+    # A configuration change can affect any test, so recommend all of them
+    # instead of guessing from names. Tests matched above stay REQUIRED.
+    if config_changed and ctx.test_files_in_repo:
+        already = {r.suite.path for r in recommendations}
+        for t in ctx.test_files_in_repo:
+            if t in already:
+                continue
+            recommendations.append(TestRecommendation(
+                suite=TestSuite(path=t, framework=ctx.test_framework),
+                risk=TestRisk.RECOMMENDED,
+                reason=(
+                    "Project config file changed; possible dependency/build impact"
+                ),
+                confidence=0.6,
+            ))
+        return AnalysisResult(
+            recommendations=recommendations,
+            language=ctx.language,
+            estimated_savings=0.0,
+            summary=(
+                "Rule-based fallback: config change, "
+                f"{len(recommendations)} tests recommended"
+            ),
+        )
 
     # If no specific tests found, recommend running all
     if not recommendations and ctx.test_files_in_repo:

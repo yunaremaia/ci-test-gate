@@ -48,6 +48,38 @@ See [docs/LANGUAGES.md](docs/LANGUAGES.md) for language-specific test pattern do
 - `gate` — Block merge if required tests didn't run
 - `local` — Run before push to catch issues early
 
+### Config file changes
+
+A change to a project or dependency configuration file — `pyproject.toml`,
+`package.json`, `Cargo.toml`, `go.mod`, `requirements.txt`, `tsconfig.json`,
+their lockfiles, and similar — can break any test in the repository, not just
+tests whose name resembles the changed file. Matching by filename in that case
+under-selects, which is the more dangerous failure for a test gate.
+
+By default, when any such file changes, `ci-test-gate` recommends **every**
+test it knows about. Tests that were directly modified or directly matched to
+a changed source file remain `required`; the rest are `recommended`.
+
+```console
+$ ci-test-gate suggest --diff pr.diff --test-files tests.txt
+```
+
+To restore ordinary path-based matching, pass `--config-changes normal`:
+
+```console
+$ ci-test-gate suggest --diff pr.diff --test-files tests.txt --config-changes normal
+```
+
+The flag is available on both `suggest` and `local`, and also applies in
+`--llm` mode. Detection matches the basename, so configuration inside
+subprojects and monorepos (`services/api/package.json`) counts too.
+
+> This depends on the accuracy of your test-file list: a test that was never
+> passed in via `--test-files` (or discovered by `local`) cannot be recommended.
+> The widening is deliberately conservative — it never omits a known test for a
+> configuration change — but it does not measure real coverage, and it cannot
+> prove that any selected suite exercises the changed dependency.
+
 ---
 
 ## LLM Classification

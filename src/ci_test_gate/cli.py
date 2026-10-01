@@ -49,6 +49,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Output format",
     )
     suggest_parser.add_argument(
+        "--config-changes",
+        choices=["broad", "normal"],
+        default="broad",
+        help=(
+            "How to classify when a project/dependency config file changes "
+            "(pyproject.toml, package.json, ...): 'broad' recommends every "
+            "known test (default), 'normal' uses ordinary path matching"
+        ),
+    )
+
+    suggest_parser.add_argument(
         "--llm",
         action="store_true",
         default=False,
@@ -84,6 +95,17 @@ def main(argv: list[str] | None = None) -> int:
         default="markdown",
         help="Output format",
     )
+    local_parser.add_argument(
+        "--config-changes",
+        choices=["broad", "normal"],
+        default="broad",
+        help=(
+            "How to classify when a project/dependency config file changes "
+            "(pyproject.toml, package.json, ...): 'broad' recommends every "
+            "known test (default), 'normal' uses ordinary path matching"
+        ),
+    )
+
     local_parser.add_argument(
         "--llm",
         action="store_true",
@@ -170,10 +192,13 @@ def _handle_local(args) -> int:
             "classifier_type": "llm",
             "api_key": getattr(args, "llm_api_key", None),
             "model": getattr(args, "llm_model", None),
+            "config_changes": getattr(args, "config_changes", "broad"),
         }
         classifier: TestClassifier = LLMTestClassifier(llm_config)
     else:
-        classifier = TestClassifier()
+        classifier = TestClassifier(
+            config={"config_changes": getattr(args, "config_changes", "broad")}
+        )
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output
@@ -227,10 +252,13 @@ def _handle_suggest(args) -> int:
             "classifier_type": "llm",
             "api_key": getattr(args, "llm_api_key", None),
             "model": getattr(args, "llm_model", None),
+            "config_changes": getattr(args, "config_changes", "broad"),
         }
         classifier: TestClassifier = LLMTestClassifier(llm_config)
     else:
-        classifier = TestClassifier()
+        classifier = TestClassifier(
+            config={"config_changes": getattr(args, "config_changes", "broad")}
+        )
     recommendation = classifier.classify(changes, context, test_files or None)
 
     # Output

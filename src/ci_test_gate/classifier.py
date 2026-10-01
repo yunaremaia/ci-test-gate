@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from .context_builder import ChangeContext
 from .diff_parser import DiffParser, FileChange
+from .context_builder import is_config_file
 from .llm import LLMConfig
 
 # Module-level placeholder so tests can patch OpenAI without triggering a
@@ -65,6 +66,9 @@ class TestClassifier:
     def __init__(self, classifier_type: str = "heuristic", config: dict | None = None):
         self.classifier_type = classifier_type
         self.config = config or {}
+        # "broad" (default) widens test selection when a project/dependency
+        # config file changes; "normal" keeps ordinary path matching.
+        self.config_changes = self.config.get("config_changes", "broad")
 
     @classmethod
     def from_config(cls, config):
@@ -102,9 +106,18 @@ class TestClassifier:
         return max(0, min(pct, 95))
 
     def heuristic_classify(self, changes: list, context: ChangeContext, test_files: list[str] | None = None) -> TestRecommendation:
-        """Simple heuristic: recommend tests matching changed file paths."""
+        """Simple heuristic: recommend tests matching changed file paths.
+
+        When ``config_changes`` is ``"broad"`` (the default) and a project or
+        dependency configuration file changed, every discovered test is
+        recommended rather than only those matching by name — a dependency
+        bump can break tests that share nothing with the changed file.
+        """
         required: list[str] = []
         optional: list[str] = []
+        config_changed = self.config_changes == "broad" and any(
+            is_config_file(c.path) for c in changes
+        )
         for change in changes:
             path = change.path
             if test_files:
@@ -128,6 +141,23 @@ class TestClassifier:
                     reasoning="CI-only changes detected; no specific tests required." if is_ci_only else "Doc-only changes detected; no specific tests required.",
                     estimated_savings_pct=80 if test_files else 0,
                 )
+        if config_changed:
+            # Every test is affected by a dependency/build config change.
+            # Directly matched tests stay required; the rest are recommended.
+            recommended = [t for t in (test_files or []) if t not in required]
+            config_files = sorted(
+                c.path for c in changes if is_config_file(c.path)
+            )
+            return TestRecommendation(
+                required=required,
+                recommended=recommended,
+                reasoning=(
+                    "Project config changed ("
+                    + ", ".join(config_files)
+                    + f"); recommending all {len(recommended)} remaining test(s)."
+                ),
+                estimated_savings_pct=self._estimate_savings(required, test_files or []),
+            )
         return TestRecommendation(
             required=required,
             optional=optional,
