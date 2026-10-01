@@ -1,6 +1,6 @@
 # ci-test-gate
 
-[![CI](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml)
+[![CI](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml) ![py](https://img.shields.io/badge/python-3.10-blue.svg) ![license](https://img.shields.io/github/license/yunaremaia/ci-test-gate) ![release](https://img.shields.io/github/v/release/yunaremaia/ci-test-gate) ![stars](https://img.shields.io/github/stars/yunaremaia/ci-test-gate)
 [![codecov](https://codecov.io/gh/yunaremaia/ci-test-gate/branch/main/graph/badge.svg)](https://codecov.io/gh/yunaremaia/ci-test-gate)
 
 **LLM-powered test selection for CI — run only the tests that matter.**
@@ -98,6 +98,18 @@ If no API key is configured, or if the LLM call fails for any reason (network er
 - [ ] Gate mode enforcement (v0.2.0)
 - [ ] Dashboard with savings metrics (v0.4.0)
 
+If this tool is useful to you, a star helps other people find it.
+
+## Related tools
+
+- **[diff-contract](https://github.com/yunaremaia/diff-contract)** — lock API contracts with diff-based tests
+- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — sandbox untrusted CI steps
+- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — guardrails for AI-generated code changes
+- **[mcp-guard](https://github.com/yunaremaia/mcp-guard)** — audit MCP servers for unsafe permissions
+
+Part of a family of focused, single-purpose developer tools — each one does one thing
+and does it well.
+
 ### License
 
 MIT
@@ -105,3 +117,4 @@ MIT
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing guidelines, and how to add a new classifier.
+
