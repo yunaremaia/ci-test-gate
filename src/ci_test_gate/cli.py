@@ -209,7 +209,7 @@ def _handle_local(args) -> int:
         sarif_doc = recommendation_to_sarif(
             recommendation.required,
             recommendation.recommended,
-            all_changed_files=changes.source_paths,
+            all_changed_files=[c.path for c in changes if not c.is_test_file],
             tool_version=__version__,
         )
         print(sarif_to_string(sarif_doc))

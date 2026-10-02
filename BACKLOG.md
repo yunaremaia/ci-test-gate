@@ -23,9 +23,20 @@ incoming forks.
 
 ## ci-test-gate: `sarif.py` has 0% test coverage
 
-**Status:** candidate for a follow-up contribution
-**Date:** 2026-10-01
+**Status:** DONE — covered, and a real bug found on the way
+**Date:** 2026-10-01 (closed 2026-10-02)
 
-`src/ci_test_gate/sarif.py` (16 statements) is never imported by any test, so the
-`--output sarif` path of the CLI is entirely unexercised. Overall coverage is 89%.
-Worth a dedicated test module; noted while validating the CI fix.
+`src/ci_test_gate/sarif.py` (16 statements) was never imported by any test, so the
+`--output sarif` path of the CLI was entirely unexercised. Overall coverage was 89%.
+
+Now covered by `tests/test_sarif_output.py`, both directly and end-to-end through
+`suggest` and `local`. Writing those end-to-end tests exposed a real crash:
+`local --output sarif` raised `AttributeError: 'list' object has no attribute
+'source_paths'`, because the handler holds a plain `list[FileChange]` from
+`DiffParser.parse()` but read it as a `Diff` model. Fixed in `cli.py` and
+recorded in the CHANGELOG.
+
+Coverage is now 99.61% (766/769) with `fail_under = 99` enforced in
+`[tool.coverage.report]`. The remaining three statements are unreachable dead
+code, documented in `pyproject.toml` rather than excluded with `# pragma: no cover`:
+`cli.py:132`, `diff_parser.py:103` and `parser.py:29`.

@@ -51,3 +51,28 @@ addopts = "--cov=ci_test_gate --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["ci_test_gate"]
+# Statement coverage only. Enabling `branch` would silently change what the
+# floor below means, so it is pinned explicitly rather than left to default.
+branch = false
+
+[tool.coverage.report]
+# The gate lives here, not as `--cov-fail-under` in the workflow, so a local
+# run and CI enforce the exact same number. Do not move it to a CLI flag.
+#
+# 99% is the honest ceiling, not a round number chosen to look good. Three
+# statements are unreachable dead code:
+#   - cli.py:132         `return 0` after both subcommands; `add_subparsers`
+#                        is `required=True`, so `args.command` is always one
+#                        of the two values handled above it.
+#   - diff_parser.py:103 `elif line.startswith(" ")`; `line` is assigned from
+#                        `raw_line.strip()` two statements earlier, so it can
+#                        never begin with a space.
+#   - parser.py:29       `if i + 2 > len(parts): break`; the header regex has
+#                        two capture groups, so `re.split` always yields 3n+1
+#                        elements and the loop never overruns.
+# They are left uncovered rather than hidden with `# pragma: no cover`.
+fail_under = 99
+# `should_fail_under` compares the total *rounded to this precision*. The
+# default of 0 would let a real 98.5% satisfy a floor of 99; two decimals makes
+# the gate mean what it says.
+precision = 2

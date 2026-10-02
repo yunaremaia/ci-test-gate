@@ -21,10 +21,15 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-pytest -q                              # run all tests (33+ tests)
+pytest -q                              # run all tests
 pytest tests/test_cli.py               # run specific test file
 pytest -q --cov=ci_test_gate --cov-report=term-missing  # with coverage
+pytest -q --no-cov tests/test_cli.py   # single file: skip the coverage gate
 ```
+
+Note: `--cov` is set in `addopts`, so running a subset measures only part of the
+package and will fail the `fail_under` floor. Use `--no-cov` when you run a single
+test file outside CI.
 
 ## Project Structure
 
@@ -39,7 +44,7 @@ ci-test-gate/
 │   ├── llm.py              # LLM integration for test selection
 │   ├── models.py           # Data models
 │   └── parser.py           # Input parsing
-├── tests/                  # 10 test files, 92%+ coverage
+├── tests/                  # 17 test files, 99% coverage (gate: fail_under=99)
 ├── .github/workflows/      # CI/CD
 └── pyproject.toml          # Build config
 ```
@@ -59,7 +64,8 @@ This reduces CI time by 40-80% on large test suites by skipping tests unaffected
 - Formatter: `ruff format`
 - Linter: `ruff check`
 - Type hints: encouraged on all functions
-- Test coverage: maintain 90%+
+- Test coverage: gated at 99% (`fail_under` in `pyproject.toml`) — a change that
+  lowers coverage fails CI
 
 ## PR Process
 
