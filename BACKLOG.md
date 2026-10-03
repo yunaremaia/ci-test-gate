@@ -40,3 +40,26 @@ Coverage is now 99.61% (766/769) with `fail_under = 99` enforced in
 `[tool.coverage.report]`. The remaining three statements are unreachable dead
 code, documented in `pyproject.toml` rather than excluded with `# pragma: no cover`:
 `cli.py:132`, `diff_parser.py:103` and `parser.py:29`.
+## ci-test-gate: no lint gate; `cli.py` has a redundant local `subprocess` import
+
+**Status:** open — not actioned this run (budget: 2 fronts, both spent)
+**Date:** 2026-10-03
+
+Found by the repo-wide pyflakes scan (`F821,F811,F632`) run across every own repo,
+the same scan that surfaced the `taintrace` annotation bug (PR #161).
+
+`src/ci_test_gate/cli.py:137` re-imports `subprocess` inside `_handle_local()` even
+though it is already imported at module scope (line 7). `F811`. Harmless at runtime —
+Python resolves it to the same module — but it is dead code that misleads a reader
+into thinking the handler has a subprocess-specific reason for the import.
+
+**Why not just fixed here:** the repo is one commit behind `origin/main` and this run
+had already spent both fronts (mcp-guard#86 workflow approval, taintrace#161). Also
+worth confirming first whether `subprocess` at module scope is used anywhere else; if
+it is only used by `_handle_local`, the fix is to delete the *module-level* import and
+keep the local one, not the reverse.
+
+**Suggested follow-up:** add a `ruff.toml` with `select = ["F"]` and a `lint` job, as
+done for taintrace. `ci-test-gate` currently has no linter at all, which is why this sat
+unnoticed. Check the full `ruff check src tests` output before wiring the gate — only
+`F811` was scanned here; `F401` and friends were not part of this scan.
