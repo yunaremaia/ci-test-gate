@@ -147,6 +147,23 @@ If no API key is configured, or if the LLM call fails for any reason (network er
 
 If this tool is useful to you, a star helps other people find it.
 
+## Sponsoring / Treasury
+
+ci-test-gate is MIT licensed and maintained in the open. Recommending which tests a diff
+actually needs stays free to run, and keeping the per-framework classifiers accurate is
+the ongoing work behind those recommendations. If it saves you time — and CI time is
+expensive — you can support continued development through GitHub Sponsors or the Solana
+treasury below.
+
+Funding details are declared in [`.github/FUNDING.yml`](.github/FUNDING.yml), which is
+what GitHub reads to render the **Sponsor** button on this repository.
+
+- **GitHub Sponsors:** [@yunaremaia](https://github.com/sponsors/yunaremaia)
+- **Solana:** `Eeztv1nCYUt1fwGWpzKC948gaWfjejYCAuLtUMgzDWbW`
+
+Use the Solana address only for intended donations. Anyone can generate a similar
+address, so verify the address against `.github/FUNDING.yml` before sending funds.
+
 ## Related tools
 
 - **[diff-contract](https://github.com/yunaremaia/diff-contract)** — lock API contracts with diff-based tests
