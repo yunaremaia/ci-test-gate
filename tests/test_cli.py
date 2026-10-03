@@ -110,28 +110,16 @@ class TestHandleSuggest:
         # Gate mode with no required tests = no block needed → returns 0
         assert result == 0
 
-    def test_gate_mode_with_required_tests(self, capsys):
-        args = self._make_args(
-            diff_text=textwrap.dedent("""\
-                diff --git a/src/foo.py b/src/foo.py
-                index 1234567..89abcde 100644
-                --- a/src/foo.py
-                +++ b/src/foo.py
-                @@ -1,3 +1,6 @@
-                 def foo():
-                -    return 1
-                +    return 2
-            """),
-            test_files_text="tests/test_foo.py\n",
-            output="markdown",
-            mode="gate",
-        )
-        result = _handle_suggest(args)
-        # Gate mode with required tests returns 0
-        assert result == 0
+    def test_gate_mode_returns_zero_when_required_tests_are_covered(self, capsys):
+        """Gate mode passes when all required tests are covered.
 
-    def test_gate_mode_with_required_tests(self, capsys):
-        """Gate mode passes when all required tests are covered."""
+        This test used to exist twice in this class under the name
+        `test_gate_mode_with_required_tests`. The second definition shadowed the
+        first at class level, so the earlier body was never collected: an editor
+        could change it and never see the test fail. The two bodies were
+        identical, so no behaviour was lost by collapsing them into one. F811
+        now fails the lint gate if a shadowed test is reintroduced.
+        """
         args = self._make_args(
             diff_text=textwrap.dedent("""\
                 diff --git a/src/foo.py b/src/foo.py
