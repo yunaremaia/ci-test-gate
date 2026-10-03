@@ -1,5 +1,33 @@
 # Backlog
 
+## Fork PRs: 30 CI runs parked in `action_required` waiting on maintainer approval
+
+**Status:** blocked on the maintainer — not actionable from the contributor side
+**Date:** 2026-10-03
+
+A repo-wide scan of open PRs across every upstream I contribute to found zero failing
+checks, but **30 workflow runs sitting in `action_required`** across 6 fork PRs. These
+are never a code problem: a `pull_request` run from a fork needs approval before it
+executes, so the checks never produce a verdict and the PR reports as
+`mergeStateStatus: UNSTABLE` or `BLOCKED` with no failing job to fix.
+
+| Upstream | PR | Parked runs |
+| --- | --- | --- |
+| MakazhanAlpamys/Soup | #1593, #1588, #1585 | 6 each |
+| goreleaser/nfpm | #1145 | 5 |
+| anchore/syft | #5373 | 3 |
+| ayghri/i-have-adhd | #225 | 3 |
+| gagansokhal-coder/Terminal_helper | #12 | 1 (Vercel, "Authorization required to deploy") |
+
+`POST /repos/{owner}/{repo}/actions/runs/{id}/approve` returns **403 "Must have admin
+rights to Repository"** — approval is the upstream maintainer's call, not the
+contributor's. Verified directly against `anchore/syft` run 37072161566.
+
+**Why this is recorded rather than fixed:** there is no code change that can move these
+runs. The lever is the maintainer approving them, or a repo-wide setting on the upstream
+side. Nothing here should be read as a defect in the submitted patches — the local gates
+for those changes are green.
+
 ## ci-test-gate: PR #88 gate stays red until the contributor's branch is rebased
 
 **Status:** needs a maintainer decision — not actioned
