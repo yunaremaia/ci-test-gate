@@ -42,8 +42,8 @@ code, documented in `pyproject.toml` rather than excluded with `# pragma: no cov
 `cli.py:132`, `diff_parser.py:103` and `parser.py:29`.
 ## ci-test-gate: no lint gate; `cli.py` has a redundant local `subprocess` import
 
-**Status:** open — not actioned this run (budget: 2 fronts, both spent)
-**Date:** 2026-10-03
+**Status:** DONE — both parts closed (lint gate wired, redundant import removed)
+**Date:** 2026-10-03 (closed 2026-10-04)
 
 Found by the repo-wide pyflakes scan (`F821,F811,F632`) run across every own repo,
 the same scan that surfaced the `taintrace` annotation bug (PR #161).
@@ -59,7 +59,37 @@ worth confirming first whether `subprocess` at module scope is used anywhere els
 it is only used by `_handle_local`, the fix is to delete the *module-level* import and
 keep the local one, not the reverse.
 
-**Suggested follow-up:** add a `ruff.toml` with `select = ["F"]` and a `lint` job, as
-done for taintrace. `ci-test-gate` currently has no linter at all, which is why this sat
-unnoticed. Check the full `ruff check src tests` output before wiring the gate — only
-`F811` was scanned here; `F401` and friends were not part of this scan.
+**Closed 2026-10-04.** The open question is settled: the module-scope `subprocess`
+import is used at five other call sites in `cli.py` (lines 141, 148, 158, 165, 171,
+178), so the *local* import was the redundant one and it is the one that was deleted.
+The gate now exists — `ruff.toml` with `select = ["F"]` plus a `lint` job in CI — and
+it is verified to bite: a throwaway file with a duplicated test method made `ruff check`
+exit 1 with `F811 Redefinition of unused`, which is exactly the defect this repo shipped
+in `tests/test_cli.py` and never noticed.
+
+Wiring the gate surfaced two more dead imports that the original `F821,F811,F632` scan
+had missed because it never checked `F401`: `json` in `cli.py` and `DiffParser`/
+`FileChange` in `classifier.py`. All three were fixed at the source, not exempted.
+
+## ci-test-gate: style rules `E501`/`I001`/`UP037` are not enabled (47 findings)
+
+**Status:** open — deliberately deferred
+**Date:** 2026-10-04
+
+`ruff check . --select=E501,I001,UP,B --statistics` reports **47** findings:
+34 `E501` (line too long), 12 `I001` (unsorted imports), 1 `UP037` (quoted
+annotation). No `B` findings. 13 of the 47 are auto-fixable (`--fix`); the
+`E501` ones need `line-length` reviewed against the repo's existing style first.
+
+**Why deferred:** the gate shipped narrow on purpose. A first gate that arrives
+as a 47-line reformat gets disabled rather than fixed, which would be a worse
+outcome than the one it replaced.
+
+**Suggested follow-up:** run `ruff check . --select=I001,UP037 --fix` as its own
+commit (13 findings, mechanical, zero risk), then decide `line-length` — the
+repo has no declared value, so `ruff.toml` currently sets 100 — and pay `E501`
+in a separate, reviewable commit. Widen `select` only once each of those is
+green.
+
+One concrete `I001` instance worth noting: `classifier.py` has two separate
+`from .context_builder import ...` lines that ruff would merge and sort.

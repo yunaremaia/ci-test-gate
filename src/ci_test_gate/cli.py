@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -134,8 +133,6 @@ def main(argv: list[str] | None = None) -> int:
 
 def _handle_local(args) -> int:
     """Handle the local command — auto-discovers diff against a base branch."""
-    import subprocess
-
     # Run git diff to get changed files
     try:
         result = subprocess.run(

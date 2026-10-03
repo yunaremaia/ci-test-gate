@@ -7,7 +7,6 @@ import os
 from dataclasses import dataclass, field
 
 from .context_builder import ChangeContext
-from .diff_parser import DiffParser, FileChange
 from .context_builder import is_config_file
 from .llm import LLMConfig
 

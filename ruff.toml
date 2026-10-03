@@ -1,0 +1,40 @@
+# Ruff configuration for ci-test-gate.
+#
+# The lint gate is deliberately narrow: pyflakes (`F`) only. `F` catches the
+# class of defect that no runtime test would — a name used but never imported,
+# a dead import, a binding redefined in the same scope. That last one is not
+# hypothetical in this repo: `tests/test_cli.py` carried two methods named
+# `test_gate_mode_with_required_tests`, and the second silently shadowed the
+# first, so one test body could be edited forever without ever failing. The
+# suite stayed green and `testpaths` still collected every module, so no
+# coverage report hinted at it either. In a repo whose entire product is
+# "tell me which tests matter", a test that silently stops running is the
+# worst kind of defect, and it is precisely the kind a green test suite
+# cannot report on itself.
+#
+# Unlike the sibling repos (taintrace, driftcheck), `tests/` is NOT excluded
+# here. Those repos lint `src/` only so the gate can never pressure a change
+# into weakening or deleting a test — a reasonable trade for a gate that is
+# purely about source correctness. It does not transfer to a repo that sells
+# test coverage: the one real bug this gate has already caught lived in
+# `tests/`. Linting only the package would have left it in place.
+#
+# Style rules (E501, I001, UP, B) are intentionally NOT enabled: enabling them
+# means a large reformat that is hard to review, and a noisy first gate gets
+# disabled rather than fixed. Widen the selection deliberately, with the
+# reformat in its own commit.
+
+target-version = "py310"
+line-length = 100
+
+[lint]
+select = ["F"]
+
+[lint.per-file-ignores]
+# F401 (unused import) is exempted for tests only, because test modules
+# legitimately import names to assert they are importable, to patch a symbol,
+# or to prove a public surface exists. F811 (redefined name) and F821
+# (undefined name) are NOT exempted anywhere in this repo: those are the two
+# rules that catch a test that shadows another or references something that
+# does not exist, which is exactly the defect class this gate was added for.
+"tests/*" = ["F401"]

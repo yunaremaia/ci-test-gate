@@ -4,6 +4,16 @@ All notable changes to ci-test-gate will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **BUG**: `tests/test_cli.py` defined two methods named `test_gate_mode_with_required_tests` in the same class. The second definition shadowed the first at class level, so the earlier body was never collected by pytest: an editor could change it and never see a test fail, and the coverage report gave no hint either. The two bodies were identical, so no behaviour was lost — but this is a test that silently stops running in a repo whose product is test selection. Collapsed into a single test, renamed `test_gate_mode_returns_zero_when_required_tests_are_covered` so the name states what it verifies. The exit-code-2 blocking path was already covered separately in `tests/test_cli_paths.py` and is untouched.
+- **BUG**: `src/ci_test_gate/cli.py` re-imported `subprocess` inside `_handle_local()` although it is already imported at module scope. Removed the local import. (The module-scope import is required: five other call sites in the same module use it.)
+- **BUG**: Two more dead imports found by the new lint gate and fixed at the source rather than exempted — `json` in `cli.py` (only ever used as a string literal such as `args.output == "json"`; output is serialised by `Recommendation.to_json()`) and `DiffParser`/`FileChange` in `classifier.py` (never referenced there, and nothing imports them from that module).
+
+### Added
+- **Lint gate.** `ruff.toml` with `select = ["F"]` (pyflakes) and a `lint` job in CI. Ruff is pinned in the `dev` extra so the local and CI versions match; rule selection lives in `ruff.toml` only, never in the workflow command.
+- Unlike the sibling repos `taintrace` and `driftcheck`, which lint `src/` only so the gate can never pressure a change into weakening a test, this gate covers `tests/` too — the only real defect it has caught so far lived there. `F401` is exempted for `tests/*` only; `F811` and `F821` are enforced everywhere, since those are the rules that catch a test which shadows another or references something that does not exist.
+- The dead-code line reference in the `pyproject.toml` coverage comment was updated from `cli.py:132` to `cli.py:131` after removing the imports shifted it.
+
 ## [0.1.1] - 2026-10-03
 
 ### Fixed

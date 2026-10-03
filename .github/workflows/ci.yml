@@ -5,6 +5,27 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Installs the same pinned-major ruff as a local `.[dev]` install, so the
+      # gate cannot pass locally and fail here on a version difference.
+      - run: pip install -e '.[dev]'
+      # Rule selection lives in ruff.toml, not in this command: `ruff check`
+      # reads the config, so there is no second place to keep in sync.
+      # No path argument, so the gate covers src/ and tests/ alike. Narrowing
+      # it to src/ is what would have missed the shadowed test in
+      # tests/test_cli.py that this gate was added for.
+      - name: Lint (pyflakes)
+        run: ruff check .
+      - name: Lint statistics
+        if: always()
+        run: ruff check . --select=F --statistics
+
   test:
     runs-on: ubuntu-latest
     strategy:
