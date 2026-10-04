@@ -167,9 +167,9 @@ address, so verify the address against `.github/FUNDING.yml` before sending fund
 
 ## Related tools
 
-- **[diff-contract](https://github.com/yunaremaia/diff-contract)** — lock API contracts with diff-based tests
-- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — sandbox untrusted CI steps
-- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — guardrails for AI-generated code changes
+- **[diff-contract](https://github.com/yunaremaia/diff-contract)** — define which files AI-generated diffs may change, block violations
+- **[ci-sandbox](https://github.com/yunaremaia/ci-sandbox)** — simulate CI pipelines locally without executing anything
+- **[vibeguard](https://github.com/yunaremaia/vibeguard)** — scan AI-generated code for hardcoded secrets, SQL injection and dangerous eval/exec
 - **[mcp-guard](https://github.com/yunaremaia/mcp-guard)** — audit MCP servers for unsafe permissions
 
 Part of a family of focused, single-purpose developer tools — each one does one thing
