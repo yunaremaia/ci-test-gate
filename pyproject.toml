@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ci-test-gate"
-version = "0.1.1"
+version = "0.1.2"
 description = "LLM-powered test selection for CI — run only the tests that matter"
 readme = "README.md"
 license = { text = "MIT" }
@@ -15,6 +15,13 @@ authors = [
 # Deliberately no "coverage" keyword: the tool selects tests, it does not
 # measure coverage, and the README says so. Claiming it would be a bad first
 # impression for anyone who installs it expecting a coverage tool.
+#
+# Every term below maps to something the tool demonstrably does, verified
+# against the source before being added: `sarif` (--output sarif, sarif.py),
+# `exit-codes`/`quality-gate` (gate mode exits 2 on an uncovered required test),
+# `pull-request` (it consumes a PR diff), `github-action` (test-gate.yml), the
+# four language terms (docs/languages.md), and so on. A keyword that overstates
+# the tool is worse than a missing one -- it wins the click and loses the user.
 keywords = [
     "ci",
     "testing",
@@ -22,12 +29,29 @@ keywords = [
     "test-impact-analysis",
     "llm",
     "github-actions",
+    "sarif",
+    "quality-gate",
+    "exit-codes",
+    "github-action",
+    "pull-request",
+    "static-analysis",
+    "python",
+    "javascript",
+    "typescript",
+    "go",
+    "rust",
+    "monorepo",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    # Truthful and was missing: the package is pure Python with no
+    # platform-specific code (no sys.platform / os.name branching anywhere in
+    # src/), so it installs and runs identically on every OS. Verified with a
+    # grep before adding, not assumed from the absence of obvious branches.
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -35,6 +59,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
+    # The tool's input is a git diff and its output lands on a pull request or
+    # in a GitHub Actions job, so this is a version-control tool in use, not a
+    # claim of being a VCS itself. Matches the siblings' classifier set.
+    "Topic :: Software Development :: Version Control",
 ]
 dependencies = ["pyyaml>=6.0", "httpx>=0.27", "pydantic>=2.0"]
 
@@ -45,13 +73,18 @@ dev = ["pytest>=8.0", "pytest-cov>=5.0", "openai>=1.0", "ruff>=0.6"]
 ci-test-gate = "ci_test_gate.cli:main"
 
 [project.urls]
-# `Documentation` points at the GitHub Pages site built from docs/ by the
-# `docs`/`deploy-docs` jobs in .github/workflows/ci.yml, not at the docs/
-# directory in this repository — the directory is a source tree, not a site.
-# `Source` replaces `Repository` rather than joining it, so the same URL is not
-# advertised twice.
-Homepage = "https://github.com/yunaremaia/ci-test-gate"
-Documentation = "https://yunaremaia.github.io/ci-test-gate/"
+# `Homepage` and `Documentation` point at the GitHub Pages site built from
+# docs/ by the `docs`/`deploy-docs` jobs in .github/workflows/ci.yml, not at the
+# docs/ directory in this repository -- the directory is a source tree, not a
+# site. `Homepage` takes the site root and `Documentation` deep-links the first
+# guide, so the two labels do not advertise one URL twice; the repository is
+# still linked under `Source`, `Issues` and `Changelog`.
+#
+# 0.1.1 kept `Homepage` on the repository on the grounds that "no docs site is
+# deployed". That was true then and stopped being true when the site shipped,
+# after the v0.1.1 tag. See CHANGELOG.md.
+Homepage = "https://yunaremaia.github.io/ci-test-gate/"
+Documentation = "https://yunaremaia.github.io/ci-test-gate/getting-started/"
 Source = "https://github.com/yunaremaia/ci-test-gate"
 Issues = "https://github.com/yunaremaia/ci-test-gate/issues"
 Funding = "https://github.com/sponsors/yunaremaia"

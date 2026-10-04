@@ -359,26 +359,37 @@ def test_pyproject_does_not_add_docs_build_deps_to_the_test_matrix():
 def test_site_url_matches_pyproject_documentation_urls():
     """The sitemap URLs and the packaging metadata must name the same host.
 
-    pyproject advertises the site as `Documentation`. If the sitemap's site_url
-    drifts from it, PyPI sends visitors to a different site than the one whose
-    canonical URLs the sitemap publishes.
+    pyproject advertises the site twice: `Homepage` is the site root and
+    `Documentation` deep-links the first guide. Both must sit under the host
+    `mkdocs.yml` publishes, or PyPI sends visitors somewhere the sitemap's
+    canonical URLs do not.
 
-    `Homepage` is deliberately *not* compared: it stays on the repository, so
-    that the source link is not advertised twice (see [project.urls]).
+    Both labels are compared, not just one. Comparing only `Documentation` left
+    `Homepage` free to sit on the bare repository -- which is exactly what
+    shipped in 0.1.1 and 0.1.2: a live documentation site advertised nowhere in
+    the slot PyPI renders most prominently.
     """
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    documentation = None
+    urls = {}
     for line in pyproject.splitlines():
         stripped = line.strip()
-        if stripped.startswith("Documentation"):
-            documentation = stripped.split("=", 1)[-1].strip().strip('"').rstrip(",")
-            break
+        for label in ("Homepage", "Documentation"):
+            if stripped.startswith(f"{label} ="):
+                urls[label] = stripped.split("=", 1)[-1].strip().strip('"').rstrip(",")
+                break
 
-    assert documentation, "pyproject.toml has no Documentation project URL to compare"
-    assert documentation == PUBLISHED_SITE_URL, (
-        f"pyproject Documentation is {documentation!r} but mkdocs.yml site_url is "
-        f"{PUBLISHED_SITE_URL!r}"
+    for label in ("Homepage", "Documentation"):
+        assert label in urls, f"pyproject.toml has no {label} project URL to compare"
+        assert urls[label].startswith(PUBLISHED_SITE_URL), (
+            f"pyproject {label} is {urls[label]!r} but the site is published at "
+            f"{PUBLISHED_SITE_URL!r}; every sitemap entry and canonical tag "
+            "would point at the wrong host"
+        )
+
+    assert urls["Documentation"] != urls["Homepage"], (
+        "Documentation and Homepage are the same URL; the labels then "
+        "advertise one destination twice and distinguish nothing"
     )
 
 

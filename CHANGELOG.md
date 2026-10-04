@@ -4,7 +4,58 @@ All notable changes to ci-test-gate will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-04
+
 ### Fixed
+- **`Homepage` now points at the published documentation site**
+  (`https://yunaremaia.github.io/ci-test-gate/`) instead of the bare repository,
+  and **`Documentation`** now deep-links the first guide
+  (`https://yunaremaia.github.io/ci-test-gate/getting-started/`) instead of
+  repeating the site root. Both URLs were verified to return HTTP 200 before
+  being written down.
+
+  0.1.1 kept `Homepage` on the repository deliberately: "`Homepage` stays on the
+  repository: no docs site is deployed, so a `Documentation` link would be
+  dead." The `Documentation` entry it describes did land, but in commit `8d1a01c`
+  — *after* the v0.1.1 tag — so the premise expired without the release
+  noticing. PyPI is currently the only channel this project converts through,
+  so the most prominent slot on the landing page was pointing at a README while
+  a 26-page documentation site went unlinked.
+
+  The repository is still linked, under `Source`, `Issues` and `Changelog`.
+
+- **`tests/test_mkdocs_site_url.py` now guards both labels.** The existing test
+  compared only `Documentation` against `mkdocs.yml`'s `site_url`, with a
+  docstring stating that `Homepage` was "deliberately not compared". That left
+  `Homepage` free to sit on the repository — precisely the field that shipped
+  wrong. Both `Homepage` and `Documentation` must now sit under the published
+  host, and the two must differ so one destination is not advertised twice.
+
+### Added
+- **Keywords expanded from 6 to 18**, each verified against the source rather
+  than added on plausibility: `sarif` (`--output sarif`, `src/ci_test_gate/sarif.py`),
+  `quality-gate` and `exit-codes` (gate mode exits 2 when a required test would
+  be skipped), `github-action` (`.github/workflows/test-gate.yml`),
+  `pull-request` (its input is a PR diff), `static-analysis` (the rule-based
+  classifier and import/function extraction run without an LLM), `monorepo`
+  (config-file changes widen selection "including inside subprojects and
+  monorepo"), and one term per language the classifier actually recognises —
+  `python`, `javascript`, `typescript`, `go`, `rust` (`docs/languages.md`).
+
+  `coverage` remains deliberately absent, as in 0.1.1: this tool selects tests,
+  it does not measure coverage, and the README says so.
+
+- **Classifiers: 11 → 13.** Added `Operating System :: OS Independent`
+  (confirmed by grepping `src/` for `sys.platform`, `os.name` and friends — the
+  package is pure Python with no platform branching) and
+  `Topic :: Software Development :: Version Control` (its input is a git diff
+  and its output lands on a pull request or in an Actions job), which brings
+  the set to parity with the sibling `diff-contract`.
+
+- `__version__` bumped to 0.1.2 so `--version` does not report the previous
+  release.
+
+### Fixed (previously unreleased, shipped in 0.1.2)
 - **BUG**: `tests/test_cli.py` defined two methods named `test_gate_mode_with_required_tests` in the same class. The second definition shadowed the first at class level, so the earlier body was never collected by pytest: an editor could change it and never see a test fail, and the coverage report gave no hint either. The two bodies were identical, so no behaviour was lost — but this is a test that silently stops running in a repo whose product is test selection. Collapsed into a single test, renamed `test_gate_mode_returns_zero_when_required_tests_are_covered` so the name states what it verifies. The exit-code-2 blocking path was already covered separately in `tests/test_cli_paths.py` and is untouched.
 - **BUG**: `src/ci_test_gate/cli.py` re-imported `subprocess` inside `_handle_local()` although it is already imported at module scope. Removed the local import. (The module-scope import is required: five other call sites in the same module use it.)
 - **BUG**: Two more dead imports found by the new lint gate and fixed at the source rather than exempted — `json` in `cli.py` (only ever used as a string literal such as `args.output == "json"`; output is serialised by `Recommendation.to_json()`) and `DiffParser`/`FileChange` in `classifier.py` (never referenced there, and nothing imports them from that module).
