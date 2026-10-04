@@ -1,0 +1,52 @@
+site_name: ci-test-gate
+site_url: https://yunaremaia.github.io/ci-test-gate/
+repo_name: yunaremaia/ci-test-gate
+repo_url: https://github.com/yunaremaia/ci-test-gate
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.tracking
+    - navigation.tabs
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Usage: usage.md
+  - Configuration: configuration.md
+  - Language Support: languages.md
+  - GitHub Action: github-action.md
+  - CI: ci.md
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yunaremaia/ci-test-gate

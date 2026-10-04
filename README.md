@@ -1,6 +1,6 @@
 # ci-test-gate
 
-[![CI](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml) ![py](https://img.shields.io/badge/python-3.10-blue.svg) [![PyPI](https://img.shields.io/pypi/v/ci-test-gate)](https://pypi.org/project/ci-test-gate/) [![Downloads](https://img.shields.io/pypi/dm/ci-test-gate)](https://pypi.org/project/ci-test-gate/) ![license](https://img.shields.io/github/license/yunaremaia/ci-test-gate) ![release](https://img.shields.io/github/v/release/yunaremaia/ci-test-gate) ![stars](https://img.shields.io/github/stars/yunaremaia/ci-test-gate)
+[![CI](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/yunaremaia/ci-test-gate/actions/workflows/ci.yml) [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-blue)](https://yunaremaia.github.io/ci-test-gate/) ![py](https://img.shields.io/badge/python-3.10-blue.svg) [![PyPI](https://img.shields.io/pypi/v/ci-test-gate)](https://pypi.org/project/ci-test-gate/) [![Downloads](https://img.shields.io/pypi/dm/ci-test-gate)](https://pypi.org/project/ci-test-gate/) ![license](https://img.shields.io/github/license/yunaremaia/ci-test-gate) ![release](https://img.shields.io/github/v/release/yunaremaia/ci-test-gate) ![stars](https://img.shields.io/github/stars/yunaremaia/ci-test-gate)
 [![codecov](https://codecov.io/gh/yunaremaia/ci-test-gate/branch/main/graph/badge.svg)](https://codecov.io/gh/yunaremaia/ci-test-gate)
 
 **LLM-powered test selection for CI — run only the tests that matter.**
@@ -55,7 +55,8 @@ ci-test-gate suggest --diff pr.diff --test-files tests.txt
 - **Risk-aware** — conservative by default
 - **Multi-language** — Python, JS/TS, Go, Rust
 
-See [docs/LANGUAGES.md](docs/LANGUAGES.md) for language-specific test pattern documentation.
+See the [documentation](https://yunaremaia.github.io/ci-test-gate/) for language-specific
+test pattern support.
 
 ### Modes
 

@@ -55,6 +55,9 @@ ENV/
 # PyCharm
 .idea/
 
+# MkDocs build output
+site/
+
 # VSCode
 .vscode/
 

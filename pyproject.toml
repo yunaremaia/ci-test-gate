@@ -45,12 +45,13 @@ dev = ["pytest>=8.0", "pytest-cov>=5.0", "openai>=1.0", "ruff>=0.6"]
 ci-test-gate = "ci_test_gate.cli:main"
 
 [project.urls]
-# No docs site is deployed for this repo, so Homepage deliberately stays on the
-# repository: PyPI already links the source, and a link to a docs/ directory
-# that is not served would be a dead link on the project's most visible page.
+# `Documentation` points at the GitHub Pages site built from docs/ by the
+# `docs`/`deploy-docs` jobs in .github/workflows/ci.yml, not at the docs/
+# directory in this repository — the directory is a source tree, not a site.
 # `Source` replaces `Repository` rather than joining it, so the same URL is not
 # advertised twice.
 Homepage = "https://github.com/yunaremaia/ci-test-gate"
+Documentation = "https://yunaremaia.github.io/ci-test-gate/"
 Source = "https://github.com/yunaremaia/ci-test-gate"
 Issues = "https://github.com/yunaremaia/ci-test-gate/issues"
 Funding = "https://github.com/sponsors/yunaremaia"
