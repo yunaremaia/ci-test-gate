@@ -70,6 +70,12 @@ jobs:
           python-version: "3.12"
       - run: pip install mkdocs mkdocs-material
       - run: mkdocs build
+      # A green build proves nothing about the sitemap: without site_url mkdocs
+      # still succeeds and still writes sitemap.xml, as a valid but EMPTY
+      # urlset. The sibling repo driftcheck shipped exactly that for months.
+      # This is the only job where mkdocs is installed, so it is the only place
+      # the real artifact can be checked.
+      - run: python scripts/check_docs_sitemap.py --site-dir site/
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/
