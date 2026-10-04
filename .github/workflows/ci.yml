@@ -61,3 +61,44 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install mkdocs mkdocs-material
+      - run: mkdocs build
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/
+
+  deploy-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, test, docs]
+    runs-on: ubuntu-latest
+    # GitHub allows a single in-flight Pages deployment per repository, and
+    # actions/deploy-pages does not queue: a second concurrent create fails with
+    # "due to in progress deployment ... or wait for it to complete". Merging a
+    # batch of PRs lands several pushes on main within a minute, so without this
+    # group whichever deployment arrives second fails even though its build and
+    # tests are green. The group serializes them and cancel-in-progress drops the
+    # superseded one instead of publishing a stale build.
+    #
+    # This belongs on the job, not the workflow: a workflow-level group would
+    # also cancel the test matrix of a newer commit whenever an older commit
+    # reaches this step.
+    concurrency:
+      group: pages-deploy-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
