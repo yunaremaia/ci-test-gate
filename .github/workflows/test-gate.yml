@@ -23,7 +23,15 @@ jobs:
           python-version: "3.11"
 
       - name: Fetch base ref from upstream
-        run: git fetch https://github.com/${{ github.event.pull_request.base.repo.full_name }} ${{ github.event.pull_request.base.ref }} --depth=1
+        # The runner substitutes a ${{ }} expression before bash ever parses the
+        # line, so quoting it in the script would protect nothing: a ref name
+        # containing shell metacharacters lands in the command line verbatim.
+        # Routing both values through the step environment hands them to bash as
+        # variables, which keeps the command line fixed no matter what they hold.
+        env:
+          BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: git fetch "https://github.com/$BASE_REPO" "$BASE_REF" --depth=1
 
       - name: Install ci-test-gate
         run: pip install -e '.[dev]'

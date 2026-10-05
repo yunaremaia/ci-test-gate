@@ -4,6 +4,29 @@ All notable changes to ci-test-gate will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **`test-gate.yml` no longer interpolates `${{ }}` expressions into a shell
+  line.** The `Fetch base ref from upstream` step expanded
+  `github.event.pull_request.base.repo.full_name` and `...base.ref` straight into
+  a `git fetch` command. The runner substitutes an expression *before* bash parses
+  the line, so quoting it in the YAML would have protected nothing — the hostile
+  text is already part of the script source when the shell sees it. Both values
+  now travel through the step `env:` and are read as shell variables, which keeps
+  the command line fixed regardless of what they contain. The fetch itself is
+  unchanged: same URL, same ref, same `--depth=1`.
+
+  Scoped honestly: for a valid pull request these two fields resolve to the
+  **base** repository, which the maintainer controls — not the contributor's fork.
+  Turning that into a working exploit needs write access to the base repo, so this
+  is defence in depth rather than a critical hole. What it does remove is a
+  standing trap: no future expansion in this file depends on the author
+  remembering to quote correctly.
+
+  Covered by `tests/test_fetch_step_template_injection.py`, which executes the
+  step's real `run:` block under `bash` with hostile values substituted in, and
+  asserts that no embedded command runs (the payload tries to plant a marker file)
+  and that each value reaches `git` as a single argument.
+
 ## [0.1.2] - 2026-10-04
 
 ### Fixed
