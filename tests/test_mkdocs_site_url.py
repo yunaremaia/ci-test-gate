@@ -21,7 +21,7 @@ produce entries.
 The build half -- that a real ``mkdocs build`` emits one entry per nav page --
 lives in ``scripts/check_docs_sitemap.py``, which runs in the ``docs`` CI job
 where mkdocs is installed. That split is deliberate: this file fails fast in
-every one of the 4 matrix legs without a heavyweight dependency, while the
+every matrix leg without a heavyweight dependency, while the
 script checks the artifact that actually gets deployed.
 
 The helpers are imported lazily inside the tests so a syntax error or a renamed
@@ -31,6 +31,7 @@ helper here cannot abort collection for the rest of the suite.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -344,8 +345,8 @@ def test_pyproject_does_not_add_docs_build_deps_to_the_test_matrix():
     """mkdocs must stay out of the runtime deps.
 
     It is installed explicitly by the docs job. Adding it to `[project]
-    dependencies` would pull a documentation toolchain into every one of the 13
-    matrix legs to protect against a two-line config guard.
+    dependencies]` would pull a documentation toolchain into every matrix leg
+    to protect against a two-line config guard.
     """
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     dependencies_block = pyproject.split("dependencies = [", 1)[-1].split("]", 1)[0]
@@ -406,6 +407,38 @@ def test_no_absolute_local_paths_in_mkdocs_config():
         assert marker not in text, (
             f"mkdocs.yml contains the absolute path fragment {marker!r}"
         )
+
+
+def test_python_classifiers_match_the_ci_test_matrix():
+    """Every advertised Python minor version must actually be tested in CI.
+
+    A `Programming Language :: Python :: X.Y` classifier is a promise that the
+    suite passed on X.Y. PyPI's version filter hides the package from anyone
+    filtering by that interpreter, so an untested-but-advertised 3.14 is
+    worse than an absent one -- and a matrix entry with no classifier is
+    untested support that nobody can find. The two lists drift apart by
+    default: nothing else compares them, which is how the matrix stopped at
+    3.13 while 3.14 became the current stable release.
+    """
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    advertised = {
+        line.strip().split("::")[-1].strip().strip('",')
+        for line in pyproject.splitlines()
+        if line.strip().startswith('"Programming Language :: Python :: 3.')
+    }
+
+    matrix_line = next(
+        line for line in CI_WORKFLOW.read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith("python-version: [")
+    )
+    tested = set(re.findall(r"3\.\d+", matrix_line))
+
+    assert advertised == tested, (
+        "classifiers and CI test matrix disagree: "
+        f"advertised-only={sorted(advertised - tested)}, "
+        f"tested-only={sorted(tested - advertised)}"
+    )
 
 
 if __name__ == "__main__":

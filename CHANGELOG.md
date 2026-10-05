@@ -4,6 +4,33 @@ All notable changes to ci-test-gate will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-05
+
+### Added
+- **Verified Python 3.14 support.** `Programming Language :: Python :: 3.14`
+  added to the classifiers and `'3.14'` added to the `test` job matrix in
+  `.github/workflows/ci.yml`, keeping 3.10-3.13. `requires-python` already
+  allowed it (`>=3.10`); what was missing was evidence and the classifier.
+
+  The full suite passes on CPython 3.14.7 with no source change: **320 passed,
+  13 warnings, 99.61% statement coverage** (gate floor 99.00%), against the
+  same 320 passed / 99.61% on 3.13 -- identical test counts on both
+  interpreters, so nothing is silently uncollected on 3.14. `ruff check .`
+  is clean under 3.14. No test was skipped, xfailed or excluded to get there.
+
+  This matters more than the usual version bump: 3.14 is the current stable
+  release, and PyPI's version filter hides the package from anyone filtering
+  by it, so the missing classifier made ci-test-gate invisible to new
+  installs on today's Python.
+
+### Tests
+- **`tests/test_mkdocs_site_url.py::test_python_classifiers_match_the_ci_test_matrix`**
+  asserts the `Programming Language :: Python :: X.Y` classifiers and the CI
+  `python-version` matrix list the same set. The two drifted apart by default
+  -- nothing compared them, which is how the matrix stopped at 3.13 while the
+  interpreter moved on. Verified non-vacuous: reverting the matrix to four
+  entries fails it with `advertised-only=['3.14']`.
+
 ### Fixed
 - **`test-gate.yml` no longer interpolates `${{ }}` expressions into a shell
   line.** The `Fetch base ref from upstream` step expanded
