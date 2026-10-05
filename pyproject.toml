@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ci-test-gate"
-version = "0.1.2"
+version = "0.1.3"
 description = "LLM-powered test selection for CI — run only the tests that matter"
 readme = "README.md"
 license = { text = "MIT" }
@@ -57,6 +57,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
     # The tool's input is a git diff and its output lands on a pull request or
