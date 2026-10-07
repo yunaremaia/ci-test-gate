@@ -74,6 +74,11 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="LLM model name to use (default: gpt-4o-mini)",
     )
+    suggest_parser.add_argument(
+        "--ran-tests",
+        type=Path,
+        help="File listing tests that actually ran (one per line). In gate mode, required tests must be in this list.",
+    )
 
     # `local` command (pre-push validation)
     local_parser = subparsers.add_parser("local", help="Local pre-push validation (auto-discovers diff)")
@@ -120,6 +125,11 @@ def main(argv: list[str] | None = None) -> int:
         "--llm-model",
         default=None,
         help="LLM model name to use (default: gpt-4o-mini)",
+    )
+    local_parser.add_argument(
+        "--ran-tests",
+        type=Path,
+        help="File listing tests that actually ran (one per line). In gate mode, required tests must be in this list.",
     )
 
     args = parser.parse_args(argv)
@@ -215,7 +225,12 @@ def _handle_local(args) -> int:
 
     # Gate mode: return non-zero if required tests are being skipped
     if args.mode == "gate":
-        missing = [t for t in recommendation.required if t not in (test_files or [])]
+        ran_tests: list[str] = []
+        if getattr(args, "ran_tests", None):
+            ran_tests = [line.strip() for line in args.ran_tests.read_text().splitlines() if line.strip()]
+        if recommendation.required and not ran_tests:
+            return 2  # Required tests but no run recorded
+        missing = [t for t in recommendation.required if t not in ran_tests]
         if missing:
             return 2  # Required tests not covered
 
@@ -275,7 +290,12 @@ def _handle_suggest(args) -> int:
 
     # Gate mode: return non-zero if required tests are being skipped
     if args.mode == "gate":
-        missing = [t for t in recommendation.required if t not in (test_files or [])]
+        ran_tests: list[str] = []
+        if getattr(args, "ran_tests", None):
+            ran_tests = [line.strip() for line in args.ran_tests.read_text().splitlines() if line.strip()]
+        if recommendation.required and not ran_tests:
+            return 2  # Required tests but no run recorded
+        missing = [t for t in recommendation.required if t not in ran_tests]
         if missing:
             return 2  # Required tests not covered
 

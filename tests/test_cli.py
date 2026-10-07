@@ -135,9 +135,74 @@ class TestHandleSuggest:
             output="markdown",
             mode="gate",
         )
+        args.ran_tests = self._tmp_test_files("tests/test_foo.py\n")
         result = _handle_suggest(args)
         # Gate mode with required tests covered → returns 0
         assert result == 0
+
+    def test_gate_mode_returns_2_when_required_not_in_ran_tests(self, capsys):
+        """Gate mode returns 2 when required tests are not in ran_tests."""
+        args = self._make_args(
+            diff_text=textwrap.dedent("""\
+                diff --git a/src/foo.py b/src/foo.py
+                index 1234567..89abcde 100644
+                --- a/src/foo.py
+                +++ b/src/foo.py
+                @@ -1,3 +1,6 @@
+                 def foo():
+                -    return 1
+                +    return 2
+            """),
+            test_files_text="tests/test_foo.py\ntests/test_bar.py\n",
+            output="markdown",
+            mode="gate",
+        )
+        # ran_tests only has test_bar.py, but required is test_foo.py
+        args.ran_tests = self._tmp_test_files("tests/test_bar.py\n")
+        result = _handle_suggest(args)
+        assert result == 2
+
+    def test_gate_mode_returns_0_when_all_required_in_ran_tests(self, capsys):
+        """Gate mode returns 0 when all required tests are in ran_tests."""
+        args = self._make_args(
+            diff_text=textwrap.dedent("""\
+                diff --git a/src/foo.py b/src/foo.py
+                index 1234567..89abcde 100644
+                --- a/src/foo.py
+                +++ b/src/foo.py
+                @@ -1,3 +1,6 @@
+                 def foo():
+                -    return 1
+                +    return 2
+            """),
+            test_files_text="tests/test_foo.py\ntests/test_bar.py\n",
+            output="markdown",
+            mode="gate",
+        )
+        args.ran_tests = self._tmp_test_files("tests/test_foo.py\ntests/test_bar.py\n")
+        result = _handle_suggest(args)
+        assert result == 0
+
+    def test_gate_mode_returns_2_when_required_and_no_ran_tests(self, capsys):
+        """Gate mode returns 2 when required is non-empty and no ran_tests provided."""
+        args = self._make_args(
+            diff_text=textwrap.dedent("""\
+                diff --git a/src/foo.py b/src/foo.py
+                index 1234567..89abcde 100644
+                --- a/src/foo.py
+                +++ b/src/foo.py
+                @@ -1,3 +1,6 @@
+                 def foo():
+                -    return 1
+                +    return 2
+            """),
+            test_files_text="tests/test_foo.py\n",
+            output="markdown",
+            mode="gate",
+        )
+        # No ran_tests provided — conservative fail
+        result = _handle_suggest(args)
+        assert result == 2
 
 
 class TestMain:

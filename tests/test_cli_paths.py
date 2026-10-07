@@ -29,7 +29,7 @@ DIFF = textwrap.dedent("""\
 """)
 
 
-def _local(*args: str, diff: str = DIFF, test_files: str = "tests/test_foo.py\n", llm_required=None):
+def _local(*args: str, diff: str = DIFF, test_files: str = "tests/test_foo.py\n", llm_required=None, ran_tests=None):
     """Drive the `local` command with a scripted sequence of git calls.
 
     When `llm_required` is given, the LLM classifier is stubbed to report
@@ -52,6 +52,8 @@ def _local(*args: str, diff: str = DIFF, test_files: str = "tests/test_foo.py\n"
             MagicMock(stdout=diff, returncode=0),
             MagicMock(stdout=test_files, returncode=0),
         ]
+        if ran_tests is not None:
+            args = (*args, "--ran-tests", ran_tests)
         if llm_patch is not None:
             with llm_patch:
                 return main(["local", *args])
@@ -113,8 +115,10 @@ def test_local_gate_mode_returns_two_when_a_required_test_is_not_in_the_list():
     assert rc == 2
 
 
-def test_local_gate_mode_returns_zero_when_required_tests_are_covered():
-    rc = _local("--mode", "gate", test_files="tests/test_foo.py\n")
+def test_local_gate_mode_returns_zero_when_required_tests_are_covered(tmp_path):
+    ran_tests = tmp_path / "ran.txt"
+    ran_tests.write_text("tests/test_foo.py\n")
+    rc = _local("--mode", "gate", test_files="tests/test_foo.py\n", ran_tests=str(ran_tests))
 
     assert rc == 0
 
@@ -219,8 +223,10 @@ def test_suggest_gate_mode_returns_zero_when_required_tests_are_covered(tmp_path
     diff_file.write_text(DIFF)
     test_list = tmp_path / "tests.txt"
     test_list.write_text("tests/test_foo.py\n")
+    ran_tests = tmp_path / "ran.txt"
+    ran_tests.write_text("tests/test_foo.py\n")
 
-    rc = main(["suggest", "--diff", str(diff_file), "--test-files", str(test_list), "--mode", "gate"])
+    rc = main(["suggest", "--diff", str(diff_file), "--test-files", str(test_list), "--mode", "gate", "--ran-tests", str(ran_tests)])
 
     assert rc == 0
 
