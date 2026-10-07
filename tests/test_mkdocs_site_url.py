@@ -341,6 +341,72 @@ def test_sitemap_check_script_has_no_third_party_imports():
     )
 
 
+def test_site_description_is_configured(mkdocs_text):
+    """The root cause of missing meta description: no site_description in mkdocs.yml.
+
+    mkdocs only emits ``<meta name="description">`` when ``site_description`` is
+    set. Without it the build is still green and the tag is simply absent.
+    """
+    match = re.search(r"^site_description:\s*(.+)$", mkdocs_text, re.MULTILINE)
+    assert match, (
+        "mkdocs.yml defines no site_description. mkdocs still builds successfully "
+        "but emits no <meta name=\"description\"> tag, so search engines have no "
+        "snippet to show. Set site_description to match the package description."
+    )
+
+
+def test_site_description_matches_pyproject(mkdocs_text):
+    """site_description must be derived from pyproject.toml, not invented.
+
+    A hand-written expected list cannot notice the thing missing from it. This
+    test derives the expected value from pyproject.toml's description field and
+    asserts mkdocs.yml uses the same string.
+    """
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    desc_match = re.search(r'^description\s*=\s*"([^"]+)"', pyproject, re.MULTILINE)
+    assert desc_match, "pyproject.toml has no description field to derive from"
+    expected = desc_match.group(1)
+
+    yml_match = re.search(r"^site_description:\s*(.+)$", mkdocs_text, re.MULTILINE)
+    assert yml_match, "mkdocs.yml defines no site_description"
+    actual = yml_match.group(1).strip().strip("'\"")
+
+    assert actual == expected, (
+        f"site_description in mkdocs.yml is {actual!r} but pyproject.toml "
+        f"description is {expected!r}; they must match"
+    )
+
+
+def test_theme_custom_dir_configured(mkdocs_text):
+    """custom_dir must point at overrides/ for the OG template to be found."""
+    assert "custom_dir: overrides" in mkdocs_text, (
+        "mkdocs.yml theme has no custom_dir: overrides; the OG template in "
+        "overrides/main.html will not be loaded"
+    )
+
+
+def test_overrides_main_html_exists():
+    """The overrides/main.html file must exist and be tracked by git."""
+    overrides = REPO_ROOT / "overrides" / "main.html"
+    assert overrides.is_file(), (
+        "overrides/main.html is missing; mkdocs-material does not emit "
+        "og:/twitter: tags without it"
+    )
+
+
+def test_overrides_references_og_tags():
+    """The overrides template must reference og:title and og:description."""
+    overrides = REPO_ROOT / "overrides" / "main.html"
+    content = overrides.read_text(encoding="utf-8")
+
+    assert "og:title" in content, (
+        "overrides/main.html does not reference og:title; the tag will not be emitted"
+    )
+    assert "og:description" in content, (
+        "overrides/main.html does not reference og:description; the tag will not be emitted"
+    )
+
+
 def test_pyproject_does_not_add_docs_build_deps_to_the_test_matrix():
     """mkdocs must stay out of the runtime deps.
 

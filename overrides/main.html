@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{% if page.is_homepage %}{{ config.site_name }}{% else %}{{ page.title }} - {{ config.site_name }}{% endif %}" />
+  <meta property="og:description" content="{{ config.site_description }}" />
+  <meta property="og:url" content="{{ page.canonical_url }}" />
+  <meta name="twitter:card" content="summary" />
+{% endblock %}
