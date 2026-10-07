@@ -1,4 +1,5 @@
 site_name: ci-test-gate
+site_description: LLM-powered test selection for CI — run only the tests that matter
 site_url: https://yunaremaia.github.io/ci-test-gate/
 repo_name: yunaremaia/ci-test-gate
 repo_url: https://github.com/yunaremaia/ci-test-gate
@@ -6,6 +7,7 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     - scheme: default
       primary: indigo
