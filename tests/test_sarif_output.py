@@ -75,7 +75,14 @@ def test_rules_declare_both_expected_ids_with_severity_metadata():
 # ---------------------------------------------------------------------------
 
 
-def test_changed_file_with_no_recommendation_is_flagged():
+def test_changed_file_with_matching_test_is_not_flagged():
+    """A source file whose base name appears in a test path is considered tested.
+
+    This is the regression test for #105: ``recommendation_to_sarif`` used to
+    compare test paths against source paths by exact match, so every changed
+    source file was flagged as untested even when a corresponding test was
+    selected.
+    """
     doc = recommendation_to_sarif(
         required=["tests/test_alpha.py"],
         recommended=["tests/test_beta.py"],
@@ -83,25 +90,24 @@ def test_changed_file_with_no_recommendation_is_flagged():
     )
 
     results = doc["runs"][0]["results"]
-    # Every changed file is matched by exact path, so all three sources are
-    # flagged: recommending tests/test_alpha.py does not "cover" src/alpha.py.
+    # src/alpha.py is covered by tests/test_alpha.py (base "alpha.py" is a
+    # substring of "src/alpha.py"); src/gamma.py and src/orphan.py are not.
     assert [r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in results] == [
-        "src/alpha.py",
         "src/gamma.py",
         "src/orphan.py",
     ]
     result = results[0]
     assert result["ruleId"] == RULE_UNTESTED_CHANGED_FILE
     assert result["level"] == "warning"
-    assert result["message"]["text"] == "No test suite selected for changed file: src/alpha.py"
-    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "src/alpha.py"
+    assert result["message"]["text"] == "No test suite selected for changed file: src/gamma.py"
+    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "src/gamma.py"
 
 
 def test_every_recommended_path_counts_as_tested():
     doc = recommendation_to_sarif(
         required=["tests/test_alpha.py"],
         recommended=["tests/test_beta.py", "tests/test_gamma.py"],
-        all_changed_files=["tests/test_alpha.py", "tests/test_beta.py", "tests/test_gamma.py"],
+        all_changed_files=["src/alpha.py", "src/beta.py", "src/gamma.py"],
     )
 
     assert doc["runs"][0]["results"] == []
@@ -112,7 +118,7 @@ def test_required_and_recommended_are_unioned_when_deciding_what_is_tested():
     doc = recommendation_to_sarif(
         required=["tests/test_only_required.py"],
         recommended=[],
-        all_changed_files=["tests/test_only_required.py"],
+        all_changed_files=["src/only_required.py"],
     )
 
     assert doc["runs"][0]["results"] == []
@@ -154,12 +160,11 @@ def test_multiple_orphans_each_get_their_own_result_in_order():
     doc = recommendation_to_sarif(
         required=["tests/test_one.py"],
         recommended=[],
-        all_changed_files=["src/one.py", "tests/test_one.py", "src/two.py"],
+        all_changed_files=["src/one.py", "src/two.py"],
     )
 
     results = doc["runs"][0]["results"]
     assert [r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in results] == [
-        "src/one.py",
         "src/two.py",
     ]
 
@@ -262,10 +267,9 @@ def test_local_sarif_reports_only_non_test_changed_files(capsys):
     """`local` narrows the changed set to source files before building SARIF.
 
     Changed *test* files are never reported as untested sources, because
-    selecting them is not a coverage finding. Note that recommendation paths
-    are compared by exact path, so recommending tests/test_orphan.py does not
-    cover src/orphan.py — both are reported, which is the documented
-    behaviour of ``recommendation_to_sarif``.
+    selecting them is not a coverage finding. The recommendation path
+    tests/test_orphan.py covers src/orphan.py via base-name matching, so
+    src/orphan.py is NOT flagged.
     """
     from ci_test_gate.cli import main
 
@@ -297,8 +301,7 @@ def test_local_sarif_reports_only_non_test_changed_files(capsys):
 
     assert rc == 0
     doc = json.loads(capsys.readouterr().out)
-    uris = [r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in doc["runs"][0]["results"]]
-    assert uris == ["src/orphan.py"]
+    assert doc["runs"][0]["results"] == []
 
 
 def test_local_sarif_omits_results_when_every_source_is_touched_only_by_tests(capsys):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 # SARIF rule IDs
@@ -39,6 +40,20 @@ RULES = [
 ]
 
 
+def _is_source_tested(source_path: str, test_paths: set[str]) -> bool:
+    """Check if a source file is covered by any test path.
+
+    Mirrors the heuristic classifier's matching logic: a test path matches a
+    source path when the test's base name (after stripping ``test_`` prefix,
+    ``_test.`` suffix, and ``tests/`` dir) is a substring of the source path.
+    """
+    for tp in test_paths:
+        tp_base = tp.replace("test_", "").replace("_test.", ".").replace("tests/", "")
+        if tp_base in source_path or source_path in tp:
+            return True
+    return False
+
+
 def recommendation_to_sarif(
     required: list[str],
     recommended: list[str],
@@ -62,7 +77,7 @@ def recommendation_to_sarif(
     # Untested changed files (no recommendation at all)
     if all_changed_files:
         for file_path in all_changed_files:
-            if file_path not in tested_paths:
+            if not _is_source_tested(file_path, tested_paths):
                 results.append({
                     "ruleId": RULE_UNTESTED_CHANGED_FILE,
                     "level": "warning",
