@@ -121,9 +121,15 @@ class TestClassifier:
             path = change.path
             if test_files:
                 for tf in test_files:
-                    # Extract base name from test file (strip test_ prefix, _test. suffix, tests/ dir)
-                    tf_base = tf.replace("test_", "").replace("_test.", ".").replace("tests/", "")
-                    if path in tf or tf_base in path:
+                    # Extract module name from test file path (handles nested dirs like tests/unit/)
+                    tf_name = tf.rsplit("/", 1)[-1]  # basename
+                    if tf_name.startswith("test_"):
+                        tf_name = tf_name[5:]
+                    elif tf_name.endswith("_test.py"):
+                        tf_name = tf_name[:-8]
+                    else:
+                        tf_name = tf_name[:-3]  # strip .py
+                    if path in tf or tf_name in path:
                         if tf not in required:
                             required.append(tf)
                     else:
